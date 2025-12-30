@@ -1,6 +1,7 @@
-// FILE: C:\Users\redfi\eu-cbam-reporter\frontend\src\components\NavBar.tsx
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\NavBar.tsx
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { useRouter } from "next/router";
 
 type NavBarProps = {
   /** Mobile icon size (px). */
@@ -14,7 +15,8 @@ const NAV_HEIGHT_PX = 72; // fixed header height
 export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: NavBarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const location = useLocation();
+  const router = useRouter();
+  const currentPath = (router.asPath || "").split("?")[0].split("#")[0];
 
   // Close on outside click
   useEffect(() => {
@@ -37,9 +39,15 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
   // Close menu on route change (mobile)
   useEffect(() => {
     setOpen(false);
-  }, [location.pathname]);
+  }, [currentPath]);
 
-  const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
+function isActive(href: string, end = true) {
+  if (!currentPath) return false;
+  if (href === "/en") return currentPath === "/en" || currentPath === "/en/";
+  return end ? currentPath === href || currentPath === href + "/" : currentPath.startsWith(href);
+}
+
+const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
     ["gs-toplink", isActive ? "is-active" : ""].filter(Boolean).join(" ");
 
   const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -280,7 +288,7 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
           {/* Desktop */}
           <div className="gs-grid gs-desktop">
             <Link
-              to="/en"
+              href="/en"
               className="gs-brand"
               aria-label="GrandScope home"
               style={{ ["--gs-icon" as any]: `${iconSizeDesktop}px` }}
@@ -299,21 +307,21 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
             </Link>
 
             <nav className="gs-links" aria-label="Primary">
-              <NavLink to="/en" end className={desktopLinkClass}>
-                Home
-              </NavLink>
-              <NavLink to="/en/pricing" end className={desktopLinkClass}>
-                Pricing
-              </NavLink>
-              <NavLink to="/en/how-it-works" end className={desktopLinkClass}>
-                How it works
-              </NavLink>
-              <NavLink to="/en/compliance-data" end className={desktopLinkClass}>
-                Compliance &amp; Data
-              </NavLink>
-              <NavLink to="/en/contact" end className={desktopLinkClass}>
-                Contact
-              </NavLink>
+              <Link href="/en" className={ desktopLinkClass({ isActive: isActive("/en", true) }) } aria-current={ isActive("/en", true) ? "page" : undefined }>
+Home
+</Link>
+              <Link href="/en/pricing" className={ desktopLinkClass({ isActive: isActive("/en/pricing", true) }) } aria-current={ isActive("/en/pricing", true) ? "page" : undefined }>
+Pricing
+</Link>
+              <Link href="/en/how-it-works" className={ desktopLinkClass({ isActive: isActive("/en/how-it-works", true) }) } aria-current={ isActive("/en/how-it-works", true) ? "page" : undefined }>
+How it works
+</Link>
+              <Link href="/en/compliance-data" className={ desktopLinkClass({ isActive: isActive("/en/compliance-data", true) }) } aria-current={ isActive("/en/compliance-data", true) ? "page" : undefined }>
+Compliance &amp; Data
+</Link>
+              <Link href="/en/contact" className={ desktopLinkClass({ isActive: isActive("/en/contact", true) }) } aria-current={ isActive("/en/contact", true) ? "page" : undefined }>
+Contact
+</Link>
             </nav>
 
             <div className="gs-actions" aria-label="Actions">
@@ -329,7 +337,7 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
           {/* Mobile */}
           <div className="gs-grid gs-mobile" style={{ position: "relative" }}>
             <Link
-              to="/en"
+              href="/en"
               className="gs-brand"
               aria-label="GrandScope home"
               style={{ ["--gs-icon" as any]: `${iconSizeMobile}px` }}
@@ -395,21 +403,21 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
               role="menu"
               aria-label="Main menu"
             >
-              <NavLink to="/en" end role="menuitem" className={mobileLinkClass}>
-                Home
-              </NavLink>
-              <NavLink to="/en/pricing" end role="menuitem" className={mobileLinkClass}>
-                Pricing
-              </NavLink>
-              <NavLink to="/en/how-it-works" end role="menuitem" className={mobileLinkClass}>
-                How it works
-              </NavLink>
-              <NavLink to="/en/compliance-data" end role="menuitem" className={mobileLinkClass}>
-                Compliance &amp; Data
-              </NavLink>
-              <NavLink to="/en/contact" end role="menuitem" className={mobileLinkClass}>
-                Contact
-              </NavLink>
+              <Link href="/en" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en", true) }) } aria-current={ isActive("/en", true) ? "page" : undefined }>
+Home
+</Link>
+              <Link href="/en/pricing" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/pricing", true) }) } aria-current={ isActive("/en/pricing", true) ? "page" : undefined }>
+Pricing
+</Link>
+              <Link href="/en/how-it-works" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/how-it-works", true) }) } aria-current={ isActive("/en/how-it-works", true) ? "page" : undefined }>
+How it works
+</Link>
+              <Link href="/en/compliance-data" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/compliance-data", true) }) } aria-current={ isActive("/en/compliance-data", true) ? "page" : undefined }>
+Compliance &amp; Data
+</Link>
+              <Link href="/en/contact" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/contact", true) }) } aria-current={ isActive("/en/contact", true) ? "page" : undefined }>
+Contact
+</Link>
 
               <div className="gs-mobile-actions">
                 <a href="#request-demo" className="gs-cta gs-ctaSecondary">
@@ -426,4 +434,4 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
     </>
   );
 }
-// FILE: C:\Users\redfi\eu-cbam-reporter\frontend\src\components\NavBar.tsx
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\NavBar.tsx
