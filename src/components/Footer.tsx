@@ -36,10 +36,11 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-slate-200 pt-6 text-xs text-slate-500">
-          © {new Date().getFullYear()} GrandScope. All rights reserved.
+          (c) {new Date().getFullYear()} GrandScope. All rights reserved.
         </div>
       </div>
     </footer>
   );
 }
 // FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\Footer.tsx
+
