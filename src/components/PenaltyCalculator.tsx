@@ -1,3 +1,4 @@
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\PenaltyCalculator.tsx
 'use client';
 
 import { useMemo, useState } from "react";
@@ -17,20 +18,16 @@ export function PenaltyCalculator({
   withWrapper = false,
 }: PenaltyCalculatorProps) {
   // Use a string state so the number input can be cleared without forcing "0"
-  // and to avoid "NaN" showing up as the input value in some browsers.
+  // and to avoid NaN showing up as the input value in some browsers.
   const [tco2eInput, setTco2eInput] = useState<string>("1");
   const [rate, setRate] = useState<number>(25);
 
   const { estimatedPenalty, safeRate } = useMemo(() => {
     const parsed = Number.parseFloat(tco2eInput);
     const t = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-
     const r = Number.isFinite(rate) ? Math.max(10, Math.min(50, rate)) : 25;
-
     return { estimatedPenalty: t * r, safeRate: r };
   }, [tco2eInput, rate]);
-
-  const EUR = "\u20AC";
 
   const inner = (
     <div className="gsx-container">
@@ -39,7 +36,7 @@ export function PenaltyCalculator({
           <div className="gsx-stripKicker">CBAM exposure</div>
           <div className="gsx-stripTitle">Penalty estimator</div>
           <div className="gsx-stripSub">
-            {`Indicative range used for missing or incorrect reports: ${EUR}10 to ${EUR}50 per tonne of unreported embedded emissions.`}
+            Indicative range used for missing or incorrect reports: EUR 10 to EUR 50 per tonne of unreported embedded emissions.
           </div>
         </div>
 
@@ -58,7 +55,7 @@ export function PenaltyCalculator({
           </label>
 
           <label className="gsx-stripField">
-            <span className="gsx-stripLabel">{`Rate (${EUR}/tonne)`}</span>
+            <span className="gsx-stripLabel">Rate (EUR/tonne)</span>
             <input
               className="gsx-range"
               type="range"
@@ -77,7 +74,7 @@ export function PenaltyCalculator({
 
           <div className="gsx-stripResult" aria-label="Estimated penalty result">
             <div className="gsx-stripResultLabel">Estimated penalty</div>
-            <div className="gsx-stripResultValue">{`${EUR}${estimatedPenalty.toFixed(2)}`}</div>
+            <div className="gsx-stripResultValue">EUR {estimatedPenalty.toFixed(2)}</div>
           </div>
 
           <div className="gsx-stripActions">
@@ -102,3 +99,4 @@ export function PenaltyCalculator({
 }
 
 export default PenaltyCalculator;
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\PenaltyCalculator.tsx
