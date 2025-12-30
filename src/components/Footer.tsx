@@ -1,3 +1,4 @@
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\Footer.tsx
 export default function Footer() {
   return (
     <footer className="border-t border-slate-200 bg-slate-50">
@@ -5,5 +6,6 @@ export default function Footer() {
         <div className="text-2xl font-bold tracking-wide text-slate-900">FOOTER</div>
       </div>
     </footer>
-  )
+  );
 }
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\Footer.tsx
