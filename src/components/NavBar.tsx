@@ -287,8 +287,7 @@ const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
         <div className="gs-container">
           {/* Desktop */}
           <div className="gs-grid gs-desktop">
-            <Link
-              href="/en"
+            <Link href="/en"
               className="gs-brand"
               aria-label="GrandScope home"
               style={{ ["--gs-icon" as any]: `${iconSizeDesktop}px` }}
@@ -325,7 +324,7 @@ Contact
             </nav>
 
             <div className="gs-actions" aria-label="Actions">
-              <Link to="/login" className="gs-cta gs-ctaPrimary">
+              <Link href="/login" className="gs-cta gs-ctaPrimary">
                 Sign In
               </Link>
               <a href="#request-demo" className="gs-cta gs-ctaSecondary">
@@ -336,8 +335,7 @@ Contact
 
           {/* Mobile */}
           <div className="gs-grid gs-mobile" style={{ position: "relative" }}>
-            <Link
-              href="/en"
+            <Link href="/en"
               className="gs-brand"
               aria-label="GrandScope home"
               style={{ ["--gs-icon" as any]: `${iconSizeMobile}px` }}
@@ -386,7 +384,7 @@ Contact
                 </svg>
               </button>
 
-              <Link to="/login" className="gs-cta gs-ctaPrimary" style={{ padding: "10px 18px" }}>
+              <Link href="/login" className="gs-cta gs-ctaPrimary" style={{ padding: "10px 18px" }}>
                 Sign In
               </Link>
             </div>
