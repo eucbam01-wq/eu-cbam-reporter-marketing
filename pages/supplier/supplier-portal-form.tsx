@@ -348,14 +348,87 @@ function FieldError({ msg }: { msg: string | null }) {
 
 function InfoTooltip({ t, meaningKey, exampleKey }: { t: TFunc; meaningKey: string; exampleKey: string }) {
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const btn = btnRef.current;
+    if (!btn) return;
+
+    const rect = btn.getBoundingClientRect();
+    const vw = window.innerWidth || 0;
+    const padding = 12;
+    const maxWidth = 360;
+    const width = Math.max(240, Math.min(maxWidth, vw - padding * 2));
+    const left = Math.max(padding, Math.min(rect.left, vw - width - padding));
+    const top = rect.bottom + 8;
+
+    setPos({ top, left, width });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (ev: PointerEvent) => {
+      const el = wrapRef.current;
+      if (!el) return;
+      if (ev.target && el.contains(ev.target as Node)) return;
+      setOpen(false);
+    };
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
-    <span className="gsx-infoWrap" data-open={open ? "true" : "false"} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button type="button" className="gsx-infoBtn" aria-label={t("common.info")} aria-expanded={open} onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)}>
+    <span
+      ref={wrapRef}
+      className="gsx-infoWrap"
+      data-open={open ? "true" : "false"}
+      onPointerEnter={(e) => {
+        if ((e as any).pointerType === "mouse") setOpen(true);
+      }}
+      onPointerLeave={(e) => {
+        if ((e as any).pointerType === "mouse") setOpen(false);
+      }}
+    >
+      <button
+        ref={btnRef}
+        type="button"
+        className="gsx-infoBtn"
+        aria-label={t("common.info")}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
         i
       </button>
 
-      <span className="gsx-tooltip" role="tooltip">
+      <span
+        className="gsx-tooltip"
+        role="tooltip"
+        style={
+          open && pos
+            ? {
+                position: "fixed",
+                top: pos.top,
+                left: pos.left,
+                width: pos.width,
+                zIndex: 10000,
+                display: "block",
+              }
+            : { display: "none" }
+        }
+      >
         <span className="gsx-tooltipGrid">
           <span className="gsx-tooltipRow">
             <span className="gsx-tooltipKey">{t("common.meaning")}</span>
@@ -564,12 +637,17 @@ export default function SupplierPortalForm({
     else if (!isValidNace(id.nace_code)) e["identity.nace_code"] = t("validation.nace");
 
     const hasUnlocode = Boolean(id.unlocode.trim());
-    if (!hasUnlocode) {
-      if (!id.coordinates.lat.trim() || !id.coordinates.lng.trim()) e["identity.location"] = t("validation.unlocode_or_coords");
-      else {
-        if (!isValidLatLng(id.coordinates.lat)) e["identity.coordinates.lat"] = t("validation.latlng");
-        if (!isValidLatLng(id.coordinates.lng)) e["identity.coordinates.lng"] = t("validation.latlng");
-      }
+    const hasLat = Boolean(id.coordinates.lat.trim());
+    const hasLng = Boolean(id.coordinates.lng.trim());
+
+    // UNLOCODE and coordinates are optional. If the supplier provides coordinates,
+    // require both lat and lng and validate format.
+    if (!hasUnlocode && (hasLat || hasLng)) {
+      if (!hasLat) e["identity.coordinates.lat"] = t("validation.required");
+      else if (!isValidLatLng(id.coordinates.lat)) e["identity.coordinates.lat"] = t("validation.latlng");
+
+      if (!hasLng) e["identity.coordinates.lng"] = t("validation.required");
+      else if (!isValidLatLng(id.coordinates.lng)) e["identity.coordinates.lng"] = t("validation.latlng");
     }
 
     if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
@@ -714,8 +792,12 @@ export default function SupplierPortalForm({
         nace_code: id.nace_code.trim(),
       };
 
-      if (id.unlocode.trim()) identity.unlocode = id.unlocode.trim();
-      else identity.coordinates = { lat: id.coordinates.lat.trim(), lng: id.coordinates.lng.trim() };
+      const unlocode = id.unlocode.trim();
+      const lat = id.coordinates.lat.trim();
+      const lng = id.coordinates.lng.trim();
+
+      if (unlocode) identity.unlocode = unlocode;
+      else if (lat || lng) identity.coordinates = { lat, lng };
 
       const payload = {
         identity,
@@ -918,7 +1000,7 @@ export default function SupplierPortalForm({
             <label className="gsx-field">
               <FieldLabelWithInfo t={t} labelKey="form.identity.unlocode.label" required={false} meaningKey="form.identity.unlocode.help.meaning" exampleKey="form.identity.unlocode.help.example" />
               <input className="gsx-input" value={input.identity.unlocode} onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, unlocode: e.target.value } }))} />
-              <FieldError msg={showErr("identity.location")} />
+              <FieldError msg={showErr("identity.unlocode")} />
             </label>
 
             <label className="gsx-field">
@@ -934,14 +1016,14 @@ export default function SupplierPortalForm({
                 <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={false} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lat} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lat) } } }))} />
-                <FieldError msg={showErr("identity.coordinates.lat") || showErr("identity.location")} />
+                <FieldError msg={showErr("identity.coordinates.lat")} />
               </label>
 
               <label className="gsx-field">
                 <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={false} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lng} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lng) } } }))} />
-                <FieldError msg={showErr("identity.coordinates.lng") || showErr("identity.location")} />
+                <FieldError msg={showErr("identity.coordinates.lng")} />
               </label>
             </div>
           )}
