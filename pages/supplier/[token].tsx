@@ -1,817 +1,608 @@
 // FILE: marketing/pages/supplier/[token].tsx
-import React, { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import type { GetServerSideProps } from "next";
-import { useRouter } from "next/router";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import SupplierPortalForm from "./supplier-portal-form";
+import { type SupplierMeta, useSupplierI18n } from "./supplier-i18n";
+import React, { useCallback, useMemo, useState } from "react";
 
-/**
- * IMPORTANT
- * This page is intentionally isolated (no PublicLayout) so suppliers never see the marketing navbar/footer.
- * It is also intentionally set to noindex/nofollow.
- */
-
-type LoadState = "idle" | "loading" | "ready" | "error";
-
-type SupplierRequestItem = {
-  cn_code?: string | null;
-  procedure_code?: string | null;
-  net_mass_kg?: number | null;
+type Props = {
+  token: string;
+  initialValid: boolean;
+  initialError: string | null;
+  initialMeta: SupplierMeta;
 };
 
-type SupplierRequestPayload = {
-  request_id?: string | null;
-  supplier_name?: string | null;
-  reporting_period?: string | null;
-  deadline_utc?: string | null;
-  items?: SupplierRequestItem[];
-  locale?: string | null;
-};
-
-type RpcOk<T> = { ok: true; data: T };
-type RpcErr = { ok: false; error: string; details?: any };
-
-function getSupabase(): SupabaseClient {
+function getSupabase(token: string): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-  if (!url || !anon) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-  return createClient(url, anon, { auth: { persistSession: false } });
+  if (!url || !anon) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+
+  return createClient(url, anon, {
+    global: { headers: { "x-supplier-token": token } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
 }
 
-async function tryRpc<T>(
-  supabase: SupabaseClient,
-  candidates: { fn: string; args: Record<string, any> }[]
-): Promise<RpcOk<T> | RpcErr> {
-  let lastErr: any = null;
-  for (const c of candidates) {
-    const { data, error } = await supabase.rpc(c.fn as any, c.args as any);
-    if (!error) return { ok: true, data: data as T };
-    lastErr = { fn: c.fn, error };
-  }
-  return {
-    ok: false,
-    error: "RPC call failed. Ensure the expected RPC function exists and is exposed to anon.",
-    details: lastErr
-  };
-}
-
-function classNames(...xs: Array<string | false | null | undefined>) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function Panel({ children }: { children: React.ReactNode }) {
+function SuccessPanel({ t }: { t: (key: string, params?: Record<string, any>) => string }) {
   return (
-    <div
-      className="mx-auto w-full max-w-3xl px-4 py-10"
-      style={{
-        fontFamily:
-          'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"'
-      }}
-    >
-      {children}
-    </div>
+    <section className="gsx-alert gsx-alertSuccess" aria-label={t("success.aria")}>
+      <h2 className="gsx-alertTitle">{t("success.title")}</h2>
+      <p className="gsx-alertText">
+        <span className="gsx-alertTextStrong">{t("success.thanks")}</span> {t("success.body")}
+      </p>
+      <p className="gsx-alertText gsx-muted" style={ marginTop: 10 }>
+        {t("success.close")}
+      </p>
+    </section>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="rounded-2xl border border-slate-200 bg-white shadow-sm"
-      style={{
-        background:
-          "radial-gradient(900px 260px at 15% 0%, rgba(48,98,99,.08), transparent 58%), radial-gradient(900px 260px at 85% 0%, rgba(255,214,23,.08), transparent 62%), rgba(255,255,255,.96)"
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+export default function SupplierTokenPage({ token, initialValid, initialError, initialMeta }: Props) {
+  const [view, setView] = useState<"form" | "success">("form");
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700">
-      {children}
-    </span>
-  );
-}
+  const [meta, setMeta] = useState<SupplierMeta>(initialMeta);
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <div className="text-sm font-semibold text-slate-900">{children}</div>;
-}
+  const { t } = useSupplierI18n(meta.locale);
 
-function HelpText({ children }: { children: React.ReactNode }) {
-  return <div className="mt-1 text-xs text-slate-600">{children}</div>;
-}
+  const onSuccess = useMemo(() => {
+    return () => setView("success");
+  }, []);
 
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={classNames(
-        "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition",
-        "focus:border-slate-400 focus:ring-2 focus:ring-slate-200",
-        props.className
-      )}
-    />
-  );
-}
-
-function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={classNames(
-        "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition",
-        "focus:border-slate-400 focus:ring-2 focus:ring-slate-200",
-        props.className
-      )}
-    />
-  );
-}
-
-function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      {...props}
-      className={classNames(
-        "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition",
-        "focus:border-slate-400 focus:ring-2 focus:ring-slate-200",
-        props.className
-      )}
-    />
-  );
-}
-
-function Divider() {
-  return <div className="my-8 h-px w-full bg-slate-200" />;
-}
-
-function formatNum(n: any) {
-  if (n === null || n === undefined || n === "") return "";
-  const x = Number(n);
-  if (Number.isNaN(x)) return String(n);
-  return x.toString();
-}
-
-type PrecursorRow = {
-  cn_code: string;
-  quantity_tonnes: string;
-  embedded_emissions_tco2e_per_tonne: string;
-};
-
-type FormState = {
-  contact_name: string;
-  contact_email: string;
-
-  direct_emissions_tco2e: string;
-  indirect_emissions_tco2e: string;
-
-  electricity_source: "grid_average" | "actual_ppa";
-  electricity_mwh: string;
-  electricity_emission_factor_tco2e_per_mwh: string;
-  electricity_evidence: File | null;
-
-  precursors_used: "no" | "yes";
-  precursors: PrecursorRow[];
-
-  carbon_price_rebate_applies: "no" | "yes";
-  rebate_amount_value: string;
-  rebate_currency: string;
-
-  notes: string;
-};
-
-function defaultForm(): FormState {
-  return {
-    contact_name: "",
-    contact_email: "",
-
-    direct_emissions_tco2e: "",
-    indirect_emissions_tco2e: "",
-
-    electricity_source: "grid_average",
-    electricity_mwh: "",
-    electricity_emission_factor_tco2e_per_mwh: "",
-    electricity_evidence: null,
-
-    precursors_used: "no",
-    precursors: [],
-
-    carbon_price_rebate_applies: "no",
-    rebate_amount_value: "",
-    rebate_currency: "EUR",
-
-    notes: ""
-  };
-}
-
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
-}
-
-function SupplierPortalForm({
-  token,
-  request
-}: {
-  token: string;
-  request: SupplierRequestPayload;
-}) {
-  const [state, setState] = useState<FormState>(() => defaultForm());
-  const [submitting, setSubmitting] = useState(false);
-  const [submitErr, setSubmitErr] = useState<string | null>(null);
-  const [submitOk, setSubmitOk] = useState(false);
-
-  const supabase = useMemo(() => getSupabase(), []);
-
-  const evidenceBucket = process.env.NEXT_PUBLIC_SUPABASE_EVIDENCE_BUCKET || "supplier-evidence";
-
-  const title = `${request?.supplier_name || "Supplier"} \u2013 EU CBAM Carbon Emissions Form`;
-
-  const canSubmit = useMemo(() => {
-    if (!state.contact_name.trim()) return false;
-    if (!isEmail(state.contact_email)) return false;
-    if (!state.direct_emissions_tco2e.trim()) return false;
-    if (!state.indirect_emissions_tco2e.trim()) return false;
-
-    if (!state.electricity_mwh.trim()) return false;
-    if (state.electricity_source === "actual_ppa") {
-      if (!state.electricity_emission_factor_tco2e_per_mwh.trim()) return false;
-      if (!state.electricity_evidence) return false;
-    }
-
-    if (state.precursors_used === "yes") {
-      if (state.precursors.length === 0) return false;
-      for (const r of state.precursors) {
-        if (!r.cn_code.trim()) return false;
-        if (!r.quantity_tonnes.trim()) return false;
-        if (!r.embedded_emissions_tco2e_per_tonne.trim()) return false;
-      }
-    }
-
-    if (state.carbon_price_rebate_applies === "yes") {
-      if (!state.rebate_amount_value.trim()) return false;
-      if (!state.rebate_currency.trim()) return false;
-    }
-
-    return true;
-  }, [state]);
-
-  async function uploadEvidence(file: File): Promise<string> {
-    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-    const safe = file.name.replace(/[^\w.\-]+/g, "_");
-    const key = `supplier/${token}/${Date.now()}_${safe}`;
-    const { error } = await supabase.storage.from(evidenceBucket).upload(key, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type || undefined
-    });
-    if (error) throw new Error(`Evidence upload failed: ${error.message}`);
-    return key;
-  }
-
-  async function onSubmit() {
-    setSubmitting(true);
-    setSubmitErr(null);
-
-    try {
-      let evidence_key: string | null = null;
-      if (state.electricity_source === "actual_ppa" && state.electricity_evidence) {
-        evidence_key = await uploadEvidence(state.electricity_evidence);
-      }
-
-      const payload = {
-        client_submitted_at: new Date().toISOString(),
-        token,
-        request_id: request.request_id || null,
-        contact: {
-          name: state.contact_name.trim(),
-          email: state.contact_email.trim()
-        },
-        electricity: {
-          source: state.electricity_source,
-          mwh: Number(state.electricity_mwh),
-          emission_factor_tco2e_per_mwh:
-            state.electricity_source === "actual_ppa"
-              ? Number(state.electricity_emission_factor_tco2e_per_mwh)
-              : null,
-          evidence_key
-        },
-        emissions: {
-          direct_emissions_tco2e: Number(state.direct_emissions_tco2e),
-          indirect_emissions_tco2e: Number(state.indirect_emissions_tco2e)
-        },
-        precursors:
-          state.precursors_used === "yes"
-            ? state.precursors.map((r) => ({
-                cn_code: r.cn_code.trim(),
-                quantity_tonnes: Number(r.quantity_tonnes),
-                embedded_emissions_tco2e_per_tonne: Number(r.embedded_emissions_tco2e_per_tonne)
-              }))
-            : [],
-        carbon_price: {
-          rebate_applies: state.carbon_price_rebate_applies === "yes",
-          rebate_amount_value:
-            state.carbon_price_rebate_applies === "yes" ? Number(state.rebate_amount_value) : null,
-          rebate_currency:
-            state.carbon_price_rebate_applies === "yes" ? state.rebate_currency.trim() : null
-        },
-        notes: state.notes?.trim() || null
+  const onMetaLoaded = useCallback((next: SupplierMeta) => {
+    setMeta((cur) => {
+      const merged: SupplierMeta = {
+        supplierName: next.supplierName ?? cur.supplierName,
+        companyName: next.companyName ?? cur.companyName,
+        locale: next.locale ?? cur.locale,
       };
 
-      const res = await tryRpc<any>(supabase, [
-        { fn: "supplier_portal_submit", args: { p_token: token, p_payload: payload } },
-        { fn: "supplier_submit_payload", args: { p_token: token, p_payload: payload } },
-        { fn: "supplier_submission_submit", args: { p_token: token, p_payload: payload } }
-      ]);
-
-      if (!res.ok) {
-        throw new Error(
-          `${res.error}${res.details ? ` | details: ${JSON.stringify(res.details)}` : ""}`
-        );
+      if (
+        merged.supplierName === cur.supplierName &&
+        merged.companyName === cur.companyName &&
+        merged.locale === cur.locale
+      ) {
+        return cur;
       }
 
-      setSubmitOk(true);
-    } catch (e: any) {
-      setSubmitErr(e?.message || "Submission failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+      return merged;
+    });
+  }, []);
+
+  const titleText =
+    meta.supplierName || meta.companyName
+      ? t("page.title", { supplierName: meta.supplierName ?? meta.companyName ?? "" })
+      : t("page.title_generic");
+
+  const showInvalid = !initialValid;
 
   return (
-    <Panel>
-      <Head>
-        <title>{title}</title>
-        <meta name="robots" content="noindex,nofollow,noarchive" />
-      </Head>
-
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Badge>Supplier portal</Badge>
-        {request.reporting_period ? <Badge>Reporting period: {request.reporting_period}</Badge> : null}
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-      <p className="mt-2 text-sm text-slate-700">
-        Required under EU law for goods supplied to the European Union.
-      </p>
-
-      <div className="mt-8">
-        <Card>
-          <div className="p-6">
-            {submitOk ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                Submitted successfully. You can close this page.
-              </div>
-            ) : null}
-
-            {submitErr ? (
-              <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                {submitErr}
-              </div>
-            ) : null}
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <FieldLabel>Contact name</FieldLabel>
-                <Input
-                  value={state.contact_name}
-                  onChange={(e) => setState((s) => ({ ...s, contact_name: e.target.value }))}
-                  placeholder="Full name"
-                  autoComplete="name"
-                />
-              </div>
-              <div>
-                <FieldLabel>Contact email</FieldLabel>
-                <Input
-                  value={state.contact_email}
-                  onChange={(e) => setState((s) => ({ ...s, contact_email: e.target.value }))}
-                  placeholder="name@company.com"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <Divider />
-
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Electricity</div>
-              <HelpText>
-                Grid average requires MWh only. Actual (PPA) requires an electricity emission factor and
-                evidence.
-              </HelpText>
-
-              <div className="mt-4 grid gap-5 md:grid-cols-2">
-                <div>
-                  <FieldLabel>Electricity source</FieldLabel>
-                  <Select
-                    value={state.electricity_source}
-                    onChange={(e) =>
-                      setState((s) => ({ ...s, electricity_source: e.target.value as any }))
-                    }
-                  >
-                    <option value="grid_average">Grid average</option>
-                    <option value="actual_ppa">Actual (PPA)</option>
-                  </Select>
-                </div>
-
-                <div>
-                  <FieldLabel>Electricity (MWh)</FieldLabel>
-                  <Input
-                    value={state.electricity_mwh}
-                    onChange={(e) => setState((s) => ({ ...s, electricity_mwh: e.target.value }))}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                {state.electricity_source === "actual_ppa" ? (
-                  <>
-                    <div>
-                      <FieldLabel>Electricity emission factor (tCO2e/MWh)</FieldLabel>
-                      <Input
-                        value={state.electricity_emission_factor_tco2e_per_mwh}
-                        onChange={(e) =>
-                          setState((s) => ({
-                            ...s,
-                            electricity_emission_factor_tco2e_per_mwh: e.target.value
-                          }))
-                        }
-                        inputMode="decimal"
-                        placeholder="0.0000"
-                      />
-                    </div>
-
-                    <div>
-                      <FieldLabel>Evidence file</FieldLabel>
-                      <HelpText>Upload the supporting document required for Actual (PPA).</HelpText>
-                      <Input
-                        type="file"
-                        accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
-                        onChange={(e) =>
-                          setState((s) => ({
-                            ...s,
-                            electricity_evidence: e.target.files?.[0] || null
-                          }))
-                        }
-                      />
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-
-            <Divider />
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <FieldLabel>Direct emissions (tCO2e)</FieldLabel>
-                <Input
-                  value={state.direct_emissions_tco2e}
-                  onChange={(e) => setState((s) => ({ ...s, direct_emissions_tco2e: e.target.value }))}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <FieldLabel>Indirect emissions (tCO2e)</FieldLabel>
-                <Input
-                  value={state.indirect_emissions_tco2e}
-                  onChange={(e) => setState((s) => ({ ...s, indirect_emissions_tco2e: e.target.value }))}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <Divider />
-
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Precursors</div>
-              <HelpText>
-                If you used input materials (precursors) for this product, add each material row with CN
-                code, quantity used (tonnes), and embedded emissions (tCO2e/tonne).
-              </HelpText>
-
-              <div className="mt-4">
-                <FieldLabel>Were precursors used?</FieldLabel>
-                <Select
-                  value={state.precursors_used}
-                  onChange={(e) => setState((s) => ({ ...s, precursors_used: e.target.value as any }))}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </Select>
-              </div>
-
-              {state.precursors_used === "yes" ? (
-                <div className="mt-5">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-slate-900">Precursor rows</div>
-                    <button
-                      type="button"
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
-                      onClick={() =>
-                        setState((s) => ({
-                          ...s,
-                          precursors: [
-                            ...s.precursors,
-                            { cn_code: "", quantity_tonnes: "", embedded_emissions_tco2e_per_tonne: "" }
-                          ]
-                        }))
-                      }
-                    >
-                      Add input material
-                    </button>
-                  </div>
-
-                  <div className="mt-4 grid gap-4">
-                    {state.precursors.map((r, idx) => (
-                      <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className="mb-3 flex items-center justify-between">
-                          <div className="text-sm font-semibold text-slate-900">Material {idx + 1}</div>
-                          <button
-                            type="button"
-                            className="text-sm font-medium text-rose-700 hover:text-rose-900"
-                            onClick={() =>
-                              setState((s) => ({
-                                ...s,
-                                precursors: s.precursors.filter((_, i) => i !== idx)
-                              }))
-                            }
-                          >
-                            Remove
-                          </button>
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-3">
-                          <div>
-                            <FieldLabel>CN code</FieldLabel>
-                            <Input
-                              value={r.cn_code}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setState((s) => ({
-                                  ...s,
-                                  precursors: s.precursors.map((x, i) =>
-                                    i === idx ? { ...x, cn_code: v } : x
-                                  )
-                                }));
-                              }}
-                              placeholder="e.g. 720711"
-                            />
-                          </div>
-
-                          <div>
-                            <FieldLabel>Quantity used (tonnes)</FieldLabel>
-                            <Input
-                              value={r.quantity_tonnes}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setState((s) => ({
-                                  ...s,
-                                  precursors: s.precursors.map((x, i) =>
-                                    i === idx ? { ...x, quantity_tonnes: v } : x
-                                  )
-                                }));
-                              }}
-                              inputMode="decimal"
-                              placeholder="0.00"
-                            />
-                          </div>
-
-                          <div>
-                            <FieldLabel>Embedded emissions (tCO2e/tonne)</FieldLabel>
-                            <Input
-                              value={r.embedded_emissions_tco2e_per_tonne}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setState((s) => ({
-                                  ...s,
-                                  precursors: s.precursors.map((x, i) =>
-                                    i === idx ? { ...x, embedded_emissions_tco2e_per_tonne: v } : x
-                                  )
-                                }));
-                              }}
-                              inputMode="decimal"
-                              placeholder="0.0000"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {state.precursors.length === 0 ? (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                        Add at least one input material row.
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <Divider />
-
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Carbon price</div>
-              <HelpText>
-                If a carbon price rebate applies, the rebate amount is required. If not applicable, select No.
-              </HelpText>
-
-              <div className="mt-4 grid gap-5 md:grid-cols-2">
-                <div>
-                  <FieldLabel>Rebate applies?</FieldLabel>
-                  <Select
-                    value={state.carbon_price_rebate_applies}
-                    onChange={(e) =>
-                      setState((s) => ({ ...s, carbon_price_rebate_applies: e.target.value as any }))
-                    }
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </Select>
-                </div>
-
-                {state.carbon_price_rebate_applies === "yes" ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <FieldLabel>Rebate amount</FieldLabel>
-                      <Input
-                        value={state.rebate_amount_value}
-                        onChange={(e) => setState((s) => ({ ...s, rebate_amount_value: e.target.value }))}
-                        inputMode="decimal"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <FieldLabel>Currency</FieldLabel>
-                      <Input
-                        value={state.rebate_currency}
-                        onChange={(e) => setState((s) => ({ ...s, rebate_currency: e.target.value }))}
-                        placeholder="EUR"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <Divider />
-
-            <div>
-              <FieldLabel>Notes / methodology</FieldLabel>
-              <HelpText>Optional. Provide any helpful context on calculation method or assumptions.</HelpText>
-              <Textarea
-                value={state.notes}
-                onChange={(e) => setState((s) => ({ ...s, notes: e.target.value }))}
-                rows={4}
-                placeholder="Optional"
-              />
-            </div>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-slate-500">
-                This link is valid only for the supplier token you received.
-              </div>
-              <button
-                type="button"
-                disabled={!canSubmit || submitting || submitOk}
-                onClick={onSubmit}
-                className={classNames(
-                  "inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition",
-                  canSubmit && !submitting && !submitOk
-                    ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "bg-slate-200 text-slate-500"
-                )}
-              >
-                {submitting ? "Submitting..." : submitOk ? "Submitted" : "Submit"}
-              </button>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="mt-6 text-xs text-slate-500">
-        If you have issues submitting, contact the importer who sent this link and provide your token.
-      </div>
-    </Panel>
-  );
-}
-
-export default function SupplierTokenPage({ initialRequest, initialError }: { initialRequest: SupplierRequestPayload | null; initialError: string | null; }) {
-  const router = useRouter();
-  const token = useMemo(() => {
-    const t = router.query?.token;
-    return typeof t === "string" ? t : "";
-  }, [router.query]);
-
-  const [loadState, setLoadState] = useState<LoadState>(() => {
-    if (initialRequest) return "ready";
-    if (initialError) return "error";
-    return "idle";
-  });
-  const [err, setErr] = useState<string | null>(initialError || null);
-  const [request, setRequest] = useState<SupplierRequestPayload | null>(initialRequest || null);
-useEffect(() => {
-    let alive = true;
-    async function load() {
-      if (!token) return;
-      if (initialRequest || initialError) return;
-      setLoadState("loading");
-      setErr(null);
-
-      try {
-        const supabase = getSupabase();
-
-        // Try the most likely RPC function names first.
-        // Your DB already enforces validity, expiry and single-use at DB level.
-        const res = await tryRpc<SupplierRequestPayload>(supabase, [
-          { fn: "supplier_portal_init", args: { p_token: token } },
-          { fn: "supplier_validate_token", args: { p_token: token } },
-          { fn: "supplier_request_by_token", args: { p_token: token } }
-        ]);
-
-        if (!res.ok) {
-          throw new Error(
-            `${res.error}${res.details ? ` | details: ${JSON.stringify(res.details)}` : ""}`
-          );
-        }
-
-        const data = res.data || {};
-        if (!alive) return;
-        setRequest(data);
-        setLoadState("ready");
-      } catch (e: any) {
-        if (!alive) return;
-        setErr(e?.message || "Unable to load supplier request");
-        setLoadState("error");
-      }
-    }
-
-    load();
-    return () => {
-      alive = false;
-    };
-  }, [token]);
-
-  return (
-    <Panel>
+    <main className="gsx-root" aria-label={t("page.aria_root")}>
       <Head>
         <title>Supplier portal</title>
         <meta name="robots" content="noindex,nofollow,noarchive" />
       </Head>
 
-      <Card>
-        <div className="p-6">
-          <div className="mb-4 inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
-            Supplier portal
-          </div>
+      <style>`
+.gsx-root{
+  --brand:#306263;
+  --support:#4073AF;
+  --highlight:#FFD617;
 
-          {loadState === "idle" || loadState === "loading" ? (
-            <div className="text-sm text-slate-700">Loading...</div>
-          ) : null}
+  --bg:#F5F5F5;
+  --bg2:#EBEBEB;
 
-          {loadState === "error" ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-              {err || "Invalid or expired link."}
+  --surface:#FFFFFF;
+
+  --text:#404040;
+  --textMuted:#707070;
+
+  --success:#2E7D32;
+  --error:#DA2131;
+
+  --border:#CFCFCF;
+  --borderStrong:#9F9F9F;
+
+  color: var(--text);
+  background:
+    radial-gradient(900px 520px at 12% 0%, rgba(48,98,99,.16), transparent 60%),
+    radial-gradient(900px 520px at 78% 6%, rgba(64,115,175,.12), transparent 62%),
+    radial-gradient(900px 520px at 50% 0%, rgba(255,214,23,.10), transparent 65%),
+    var(--bg);
+
+  min-height: 100vh;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.gsx-container{ max-width: 920px; margin: 0 auto; padding: 34px 16px 60px; }
+
+.gsx-muted{ color: var(--textMuted); }
+.gsx-sep{ opacity: .60; }
+
+.gsx-hero{
+  border-radius: 26px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.90), rgba(255,255,255,.82)) padding-box,
+    linear-gradient(135deg, rgba(48,98,99,.62), rgba(255,214,23,.42), rgba(64,115,175,.26)) border-box;
+  box-shadow:
+    0 36px 110px rgba(2,6,23,.18),
+    0 22px 70px rgba(48,98,99,.10);
+  padding: 22px;
+  backdrop-filter: blur(10px);
+}
+
+@supports not (backdrop-filter: blur(10px)){
+  .gsx-hero{ backdrop-filter: none; }
+}
+
+.gsx-heroHead{ margin-bottom: 18px; }
+.gsx-heroBody{ margin-top: 10px; }
+
+.gsx-eyebrow{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+
+.gsx-pill{
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(48,98,99,.28);
+  background:
+    radial-gradient(160px 44px at 30% 40%, rgba(255,214,23,.20), transparent 60%),
+    rgba(255,255,255,.62);
+  color: rgba(64,64,64,.96);
+}
+
+.gsx-title{
+  margin: 0 0 8px;
+  font-size: 30px;
+  line-height: 1.10;
+  letter-spacing: -0.015em;
+  font-weight: 950;
+  color: rgba(64,64,64,.98);
+}
+
+.gsx-sub{
+  margin: 0;
+  color: rgba(112,112,112,.98);
+  line-height: 1.7;
+  max-width: 90ch;
+  font-size: 14px;
+}
+
+/* Alerts */
+.gsx-alert{
+  border-radius: 18px;
+  border: 1px solid rgba(207,207,207,.95);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 16px 44px rgba(2,6,23,.10);
+  padding: 14px;
+}
+
+.gsx-alertSuccess{
+  border-color: rgba(46,125,50,.38);
+  background:
+    radial-gradient(240px 80px at 12% 30%, rgba(46,125,50,.14), transparent 60%),
+    rgba(255,255,255,.92);
+}
+
+.gsx-alertError{
+  border-color: rgba(218,33,49,.35);
+  background:
+    radial-gradient(240px 80px at 12% 30%, rgba(218,33,49,.12), transparent 60%),
+    rgba(255,255,255,.92);
+}
+
+.gsx-alertTitle{ margin: 0 0 6px; font-size: 16px; font-weight: 950; color: rgba(64,64,64,.98); }
+.gsx-alertText{ margin: 0; color: rgba(112,112,112,.98); line-height: 1.6; }
+.gsx-alertTextStrong{ color: rgba(64,64,64,.98); }
+
+/* Form layout */
+.gsx-form{ display:grid; gap: 14px; margin-top: 18px; }
+
+.gsx-card{
+  border-radius: 20px;
+  border: 1px solid rgba(207,207,207,.95);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 16px 44px rgba(2,6,23,.10);
+  overflow:visible;
+}
+
+.gsx-cardHeader{
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(207,207,207,.85);
+  background:
+    radial-gradient(240px 80px at 20% 40%, rgba(255,214,23,.14), transparent 62%),
+    rgba(235,235,235,.55);
+}
+
+.gsx-cardTitle{
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  font-weight: 950;
+  color: rgba(64,64,64,.92);
+}
+
+.gsx-cardBody{ border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; padding: 14px; display:grid; gap: 12px; }
+
+.gsx-row{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 720px){ .gsx-row{ grid-template-columns: 1fr; } }
+
+/* Chips */
+.gsx-metaRow{ display:flex; gap: 8px; flex-wrap: wrap; justify-content:flex-end; }
+@media (max-width: 720px){ .gsx-metaRow{ justify-content:flex-start; } }
+@media (max-width: 720px){
+  .gsx-cardHeader{ flex-direction: column; align-items: flex-start; }
+  .gsx-metaRow{ width: 100%; }
+  .gsx-chip{ width: 100%; }
+  .gsx-chipValue{ font-size: 14px; }
+  .gsx-countdownMain{ white-space: nowrap; }
+}
+
+
+.gsx-chip{
+  display:flex;
+  flex-direction: column;
+  align-items:flex-start;
+  gap: 4px;
+  border: 1px solid rgba(207,207,207,.95);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.78);
+  color: rgba(64,64,64,.92);
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.gsx-chipLabel{
+  color: rgba(112,112,112,.98);
+  font-weight: 950;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.gsx-chipValue{
+  font-size: 13px;
+  font-weight: 950;
+  color: rgba(64,64,64,.98);
+  font-variant-numeric: tabular-nums;
+}
+
+.gsx-chipSub{
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(112,112,112,.98);
+  opacity: 0.78;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fields */
+.gsx-field{ display:grid; gap: 6px; }
+.gsx-label{ font-size: 12px; font-weight: 900; color: rgba(64,64,64,.92); }
+
+.gsx-labelRow{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gsx-requiredStar{
+  color: var(--error);
+  font-weight: 950;
+  margin-left: 4px;
+}
+
+.gsx-input{
+  border-radius: 12px;
+  border: 1px solid rgba(207,207,207,.95);
+  background: rgba(255,255,255,.98);
+  padding: 10px 10px;
+  color: rgba(64,64,64,.98);
+  outline: none;
+}
+
+.gsx-input[readonly]{
+  background: rgba(235,235,235,.35);
+  color: rgba(64,64,64,.92);
+}
+
+.gsx-input:focus{
+  border-color: rgba(48,98,99,.60);
+  box-shadow: 0 0 0 3px rgba(48,98,99,.14);
+}
+
+.gsx-textarea{ resize: vertical; min-height: 96px; }
+
+.gsx-fieldError{ color: var(--error); font-size: 12px; margin-top: 2px; }
+
+/* Tooltip */
+.gsx-infoWrap{ position:relative; display:inline-flex; align-items:center; justify-content:center; }
+
+.gsx-infoBtn{
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 950;
+  font-size: 12px;
+  border: 1px solid rgba(207,207,207,.95);
+  background: rgba(255,255,255,.92);
+  color: rgba(64,64,64,.88);
+  box-shadow: 0 10px 30px rgba(2,6,23,.06);
+  cursor: pointer;
+}
+
+.gsx-infoBtn:focus{
+  outline: none;
+  border-color: rgba(48,98,99,.60);
+  box-shadow: 0 0 0 3px rgba(48,98,99,.14), 0 10px 30px rgba(2,6,23,.06);
+}
+
+.gsx-tooltip{
+  position:absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 44px));
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(207,207,207,.95);
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 18px 70px rgba(2,6,23,.16);
+  color: rgba(64,64,64,.98);
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity .12s ease, transform .12s ease;
+  white-space: normal;
+}
+
+.gsx-infoWrap:hover .gsx-tooltip,
+.gsx-infoWrap:focus-within .gsx-tooltip,
+.gsx-infoWrap[data-open="true"] .gsx-tooltip{
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.gsx-tooltipGrid{ display:grid; gap: 8px; }
+.gsx-tooltipRow{ display:grid; gap: 2px; }
+.gsx-tooltipKey{
+  font-size: 11px;
+  font-weight: 950;
+  color: rgba(112,112,112,.98);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.gsx-tooltipVal{ color: rgba(64,64,64,.98); }
+
+/* Footer actions */
+.gsx-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gsx-hint{ font-size: 12px; color: rgba(112,112,112,.98); }
+
+.gsx-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 950;
+  border: 1px solid rgba(207,207,207,.95);
+  background: rgba(255,255,255,.96);
+  color: rgba(64,64,64,.98);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+  box-shadow: 0 1px 0 rgba(2,6,23,.03);
+}
+
+.gsx-btn:hover{ transform: translateY(-1px); border-color: rgba(159,159,159,.90); box-shadow: 0 28px 86px rgba(2,6,23,.12); }
+
+.gsx-btnPrimary{
+  border: 1px solid rgba(48,98,99,.26);
+  background: linear-gradient(180deg, rgba(48,98,99,1), rgba(48,98,99,.92));
+  color: #FFFFFF;
+  box-shadow: 0 22px 64px rgba(48,98,99,.20), 0 10px 30px rgba(2,6,23,.10);
+}
+
+.gsx-btnPrimary:hover:enabled{ filter: brightness(0.98); border-color: rgba(48,98,99,.40); }
+
+.gsx-btnPrimary:disabled{
+  opacity: .58;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Inline status callouts */
+.gsx-inlineNote{
+  border-radius: 14px;
+  border: 1px solid rgba(207,207,207,.95);
+  background:
+    radial-gradient(240px 80px at 20% 40%, rgba(48,98,99,.10), transparent 62%),
+    rgba(255,255,255,.94);
+  padding: 10px 12px;
+  color: rgba(112,112,112,.98);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Countdown */
+.gsx-countdownMain{ font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.gsx-countdownSeconds{ color: var(--error); font-weight: 950; font-variant-numeric: tabular-nums; }
+
+/* Invalid fields */
+.gsx-input[aria-invalid="true"]{
+  border-color: rgba(218,33,49,.55);
+  box-shadow: 0 0 0 3px rgba(218,33,49,.14);
+}
+`</style>
+
+      <div className="gsx-container">
+        <section className="gsx-hero" aria-label={t("page.aria_hero")}>
+          <header className="gsx-heroHead">
+            <div className="gsx-eyebrow">
+              <span className="gsx-pill">{t("page.eyebrow.portal")}</span>
+              <span className="gsx-muted">{t("page.eyebrow.cbam")}</span>
+              <span className="gsx-sep" aria-hidden="true">
+                •
+              </span>
+              <span className="gsx-muted">{t("page.eyebrow.submission")}</span>
             </div>
-          ) : null}
 
-          {loadState === "ready" && request ? (
-            <SupplierPortalForm token={token} request={request} />
-          ) : null}
-        </div>
-      </Card>
-    </Panel>
+            <h1 className="gsx-title">{titleText}</h1>
+
+            <p className="gsx-sub">{t("page.subtitle")}</p>
+          </header>
+
+          <div className="gsx-heroBody">
+            {showInvalid ? (
+              <section className="gsx-alert gsx-alertError" aria-label={t("form.invalid.title")}>
+                <h2 className="gsx-alertTitle">{t("form.invalid.title")}</h2>
+                <p className="gsx-alertText">{initialError || t("form.invalid.generic")}</p>
+                <p className="gsx-alertText gsx-muted" style={ marginTop: 10 }>
+                  {t("form.invalid.hint")}
+                </p>
+              </section>
+            ) : view === "success" ? (
+              <SuccessPanel t={t} />
+            ) : (
+              <SupplierPortalForm
+                token={token}
+                onSuccess={onSuccess}
+                localeOverride={meta.locale}
+                onMetaLoaded={onMetaLoaded}
+              />
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const tokenParam = ctx.params?.token;
   const token = typeof tokenParam === "string" ? tokenParam : "";
 
   if (!token) {
-    return { props: { initialRequest: null, initialError: "Invalid link." } };
+    return {
+      props: {
+        token: "",
+        initialValid: false,
+        initialError: "Invalid or expired link.",
+        initialMeta: { supplierName: null, companyName: null, locale: null },
+      },
+    };
   }
 
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(token);
 
-    const res = await tryRpc<SupplierRequestPayload>(supabase, [
-      { fn: "supplier_portal_init", args: { p_token: token } },
-      { fn: "supplier_validate_token", args: { p_token: token } },
-      { fn: "supplier_request_by_token", args: { p_token: token } }
-    ]);
+    const { data, error } = await supabase.rpc("validate_supplier_token" as any, { p_token: token } as any);
 
-    if (!res.ok) {
-      return { props: { initialRequest: null, initialError: "Invalid or expired link." } };
+    if (error) {
+      return {
+        props: {
+          token,
+          initialValid: false,
+          initialError: "Invalid or expired link.",
+          initialMeta: { supplierName: null, companyName: null, locale: null },
+        },
+      };
     }
 
-    return { props: { initialRequest: res.data || null, initialError: null } };
-  } catch (e: any) {
-    return { props: { initialRequest: null, initialError: "Unable to load supplier request." } };
+    const row = Array.isArray(data) ? data[0] : data;
+    const status = row?.status ?? null;
+
+    if (status !== "valid") {
+      return {
+        props: {
+          token,
+          initialValid: false,
+          initialError: row?.error || "Invalid or expired link.",
+          initialMeta: { supplierName: null, companyName: null, locale: null },
+        },
+      };
+    }
+
+    // Optional: get context to derive locale/name if present. If it fails, still allow render.
+    let meta: SupplierMeta = { supplierName: null, companyName: null, locale: null };
+
+    const ctxRes = await supabase.rpc("get_supplier_portal_context" as any, { p_token: token } as any);
+    if (!ctxRes.error) {
+      const payload = Array.isArray(ctxRes.data) ? ctxRes.data[0] : ctxRes.data;
+      const ok = payload?.ok === true;
+
+      if (ok) {
+        const req = payload?.request || {};
+        const rep = payload?.report || {};
+
+        const supplierName =
+          (req?.supplier_name ?? req?.supplierName ?? req?.supplier ?? req?.name ?? null) ||
+          (payload?.supplier?.name ?? null);
+
+        const companyName =
+          (req?.company_name ?? req?.companyName ?? req?.company ?? req?.legal_name ?? req?.legalName ?? null) ||
+          (payload?.company?.name ?? null);
+
+        const locale =
+          (req?.locale ?? req?.language ?? req?.lang ?? req?.supplier_locale ?? req?.supplierLanguage ?? req?.preferred_language ?? req?.preferredLanguage ?? null) ||
+          (payload?.supplier?.locale ?? payload?.supplier?.language ?? null) ||
+          (rep?.locale ?? null);
+
+        meta = {
+          supplierName: typeof supplierName === "string" && supplierName.trim() ? supplierName.trim() : null,
+          companyName: typeof companyName === "string" && companyName.trim() ? companyName.trim() : null,
+          locale: typeof locale === "string" && locale.trim() ? locale.trim() : null,
+        };
+      }
+    }
+
+    return {
+      props: {
+        token,
+        initialValid: true,
+        initialError: null,
+        initialMeta: meta,
+      },
+    };
+  } catch {
+    return {
+      props: {
+        token,
+        initialValid: false,
+        initialError: "Invalid or expired link.",
+        initialMeta: { supplierName: null, companyName: null, locale: null },
+      },
+    };
   }
 };
 
