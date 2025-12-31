@@ -2224,4 +2224,11 @@ export const i18nKeys = {
     number: "validation.number",
   },
 } as const;
+
+export type SupplierMeta = {
+  supplierName: string | null;
+  companyName: string | null;
+  locale: string | null;
+};
+
 // FILE: marketing/pages/supplier/supplier-i18n.ts
