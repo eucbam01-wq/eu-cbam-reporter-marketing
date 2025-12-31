@@ -5,6 +5,34 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { type SupplierMeta, useSupplierI18n, type TFunc } from "../../src/supplier-i18n";
 
+
+function normalizePayloadForSubmit(p: any) {
+  const out = JSON.parse(JSON.stringify(p ?? {}));
+  const id = out?.identity ?? {};
+  const unlocode = (id.unlocode ?? "").toString().trim();
+
+  if (!unlocode) {
+    const latRaw = (id.lat ?? id.coordinates?.lat ?? "").toString().trim();
+    const lngRaw = (id.lng ?? id.coordinates?.lng ?? "").toString().trim();
+
+    if (latRaw || lngRaw) {
+      out.identity = {
+        ...id,
+        unlocode: "",
+        coordinates: { lat: latRaw, lng: lngRaw }
+      };
+      delete out.identity.lat;
+      delete out.identity.lng;
+    }
+  } else {
+    out.identity = { ...id, unlocode };
+    // If UNLOCODE is provided, coordinates are not required; keep as-is or remove if you want strictness.
+  }
+
+  return out;
+}
+
+
 type PrecursorRow = {
   cn_code: string;
   quantity_tonnes: string;
@@ -863,28 +891,7 @@ export default function SupplierPortalForm({
       const s1 = input.scope1;
       const s2 = input.scope2;
       const prec = input.precursors;
-      const cp = input.carbon_price;
-
-      const identity: any = {
-        operator_legal_name: id.operator_legal_name.trim(),
-        installation_name: id.installation_name.trim(),
-        installation_address: {
-          street: id.installation_address.street.trim(),
-          city: id.installation_address.city.trim(),
-          postal: id.installation_address.postal.trim(),
-          country: id.installation_address.country.trim(),
-        },
-        nace_code: id.nace_code.trim(),
-      };
-
-      const unlocode = id.unlocode.trim();
-      const lat = id.coordinates.lat.trim();
-      const lng = id.coordinates.lng.trim();
-
-      if (unlocode) identity.unlocode = unlocode;
-      else if (lat || lng) identity.coordinates = { lat, lng };
-
-      const payload = {
+const payload = normalizePayloadForSubmit({
         identity,
         goods: {
           cn_code: goods.cn_code.trim(),
@@ -915,6 +922,24 @@ export default function SupplierPortalForm({
           (Boolean(cp.scheme_name.trim()) ||
             Boolean(cp.amount_paid.trim()) ||
             Boolean(cp.currency.trim()) ||
+            Boolean(cp.quantity_covered_tco2e.trim()) ||
+            Boolean(cp.rebate_amount.trim()) ||
+            Boolean(cp.rebate_or_free_allocation))
+            ? {
+                scheme_name: cp.scheme_name.trim(),
+                amount_paid: cp.amount_paid.trim(),
+                currency: cp.currency.trim(),
+                quantity_covered_tco2e: cp.quantity_covered_tco2e.trim(),
+                rebate_or_free_allocation: cp.rebate_or_free_allocation,
+                ...(cp.rebate_or_free_allocation ? { rebate_amount: cp.rebate_amount.trim() } : {}),
+              }
+            : {},
+
+        derived: {},
+        evidence_files: evidenceFiles,
+        notes: input.notes,
+        client_submitted_at: new Date().toISOString(),
+      })|
             Boolean(cp.quantity_covered_tco2e.trim()) ||
             Boolean(cp.rebate_amount.trim()) ||
             Boolean(cp.rebate_or_free_allocation))
