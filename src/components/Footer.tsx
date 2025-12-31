@@ -1,7 +1,37 @@
 ﻿// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\src\components\Footer.tsx
+import Link from "next/link";
+import { useRouter } from "next/router";
+
+const DEFAULT_LOCALE = "en";
+
+function getLocalePrefixFromPath(pathname: string) {
+  const safePath = (pathname || "").split("?")[0].split("#")[0];
+  const firstSegment = safePath.split("/").filter(Boolean)[0] || "";
+  const looksLikeLocale = /^[a-z]{2}(-[A-Z]{2})?$/.test(firstSegment);
+  return looksLikeLocale ? `/${firstSegment}` : `/${DEFAULT_LOCALE}`;
+}
+
 export default function Footer() {
+  const router = useRouter();
+  const currentPath = (router.asPath || "").split("?")[0].split("#")[0];
+  const localePrefix = getLocalePrefixFromPath(currentPath);
+
+  const hrefOverview = localePrefix;
+  const hrefHow = `${localePrefix}/how-it-works`;
+  const hrefPricing = `${localePrefix}/pricing`;
+  const hrefCompliance = `${localePrefix}/compliance-data`;
+  const hrefContact = `${localePrefix}/contact`;
+  const hrefPenalty = "/tools/penalty-calculator";
+
   return (
-    <footer className="border-t border-slate-200 bg-slate-50">
+    <footer
+      className="border-t"
+      style={{
+        borderColor: "rgba(207,207,207,.70)",
+        background:
+          "radial-gradient(900px 220px at 15% 0%, rgba(48,98,99,.10), transparent 58%), radial-gradient(900px 220px at 85% 0%, rgba(255,214,23,.10), transparent 62%), rgba(245,245,245,.92)",
+      }}
+    >
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
@@ -17,18 +47,42 @@ export default function Footer() {
               <div>
                 <div className="text-sm font-semibold text-slate-900">Product</div>
                 <ul className="mt-3 space-y-2 text-sm">
-                  <li><a className="text-slate-600 hover:text-slate-900" href="/en">Overview</a></li>
-                  <li><a className="text-slate-600 hover:text-slate-900" href="/en/how-it-works">How it works</a></li>
-                  <li><a className="text-slate-600 hover:text-slate-900" href="/en/pricing">Pricing</a></li>
+                  <li>
+                    <Link className="text-slate-600 hover:text-slate-900" href={hrefOverview}>
+                      Overview
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-slate-600 hover:text-slate-900" href={hrefHow}>
+                      How it works
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-slate-600 hover:text-slate-900" href={hrefPricing}>
+                      Pricing
+                    </Link>
+                  </li>
                 </ul>
               </div>
 
               <div>
                 <div className="text-sm font-semibold text-slate-900">Compliance</div>
                 <ul className="mt-3 space-y-2 text-sm">
-                  <li><a className="text-slate-600 hover:text-slate-900" href="/en/compliance-data">Compliance data</a></li>
-                  <li><a className="text-slate-600 hover:text-slate-900" href="/tools/penalty-calculator">Penalty calculator</a></li>
-                  <li><a className="text-slate-600 hover:text-slate-900" href="/en/contact">Contact</a></li>
+                  <li>
+                    <Link className="text-slate-600 hover:text-slate-900" href={hrefCompliance}>
+                      Compliance data
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-slate-600 hover:text-slate-900" href={hrefPenalty}>
+                      Penalty calculator
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-slate-600 hover:text-slate-900" href={hrefContact}>
+                      Contact
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </div>

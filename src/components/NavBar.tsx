@@ -11,20 +11,42 @@ type NavBarProps = {
 };
 
 const NAV_HEIGHT_PX = 72; // fixed header height
+const DEFAULT_LOCALE = "en";
+
+function getLocalePrefixFromPath(pathname: string) {
+  const safePath = (pathname || "").split("?")[0].split("#")[0];
+  const firstSegment = safePath.split("/").filter(Boolean)[0] || "";
+  const looksLikeLocale = /^[a-z]{2}(-[A-Z]{2})?$/.test(firstSegment);
+  return looksLikeLocale ? `/${firstSegment}` : `/${DEFAULT_LOCALE}`;
+}
+
+function stripTrailingSlash(pathname: string) {
+  if (!pathname) return "";
+  if (pathname === "/") return "/";
+  return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+}
 
 export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: NavBarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const currentPath = (router.asPath || "").split("?")[0].split("#")[0];
+  const localePrefix = getLocalePrefixFromPath(currentPath);
+
+  const hrefHome = localePrefix;
+  const hrefPricing = `${localePrefix}/pricing`;
+  const hrefHow = `${localePrefix}/how-it-works`;
+  const hrefCompliance = `${localePrefix}/compliance-data`;
+  const hrefContact = `${localePrefix}/contact`;
+  const hrefRequestDemo = `${localePrefix}#request-demo`;
 
   // Close on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
     }
-    if (open) document.addEventListener("mousedown", handleClickOutside as any);
-    return () => document.removeEventListener("mousedown", handleClickOutside as any);
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
   // Close on escape
@@ -41,13 +63,16 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
     setOpen(false);
   }, [currentPath]);
 
-function isActive(href: string, end = true) {
-  if (!currentPath) return false;
-  if (href === "/en") return currentPath === "/en" || currentPath === "/en/";
-  return end ? currentPath === href || currentPath === href + "/" : currentPath.startsWith(href);
-}
+  function isActive(href: string, end = true) {
+    const cur = stripTrailingSlash(currentPath);
+    const target = stripTrailingSlash(href);
 
-const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
+    if (target === localePrefix) return cur === localePrefix;
+    if (end) return cur === target;
+    return cur === target || cur.startsWith(target + "/");
+  }
+
+  const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
     ["gs-toplink", isActive ? "is-active" : ""].filter(Boolean).join(" ");
 
   const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -81,7 +106,7 @@ const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
           }
 
           .gs-container{
-            max-width: 1140px;
+            max-width: 1152px;
             margin: 0 auto;
             padding: 0 16px;
             height: 100%;
@@ -287,7 +312,8 @@ const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
         <div className="gs-container">
           {/* Desktop */}
           <div className="gs-grid gs-desktop">
-            <Link href="/en"
+            <Link
+              href={hrefHome}
               className="gs-brand"
               aria-label="GrandScope home"
               style={{ ["--gs-icon" as any]: `${iconSizeDesktop}px` }}
@@ -306,36 +332,57 @@ const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
             </Link>
 
             <nav className="gs-links" aria-label="Primary">
-              <Link href="/en" className={ desktopLinkClass({ isActive: isActive("/en", true) }) } aria-current={ isActive("/en", true) ? "page" : undefined }>
-Home
-</Link>
-              <Link href="/en/pricing" className={ desktopLinkClass({ isActive: isActive("/en/pricing", true) }) } aria-current={ isActive("/en/pricing", true) ? "page" : undefined }>
-Pricing
-</Link>
-              <Link href="/en/how-it-works" className={ desktopLinkClass({ isActive: isActive("/en/how-it-works", true) }) } aria-current={ isActive("/en/how-it-works", true) ? "page" : undefined }>
-How it works
-</Link>
-              <Link href="/en/compliance-data" className={ desktopLinkClass({ isActive: isActive("/en/compliance-data", true) }) } aria-current={ isActive("/en/compliance-data", true) ? "page" : undefined }>
-Compliance &amp; Data
-</Link>
-              <Link href="/en/contact" className={ desktopLinkClass({ isActive: isActive("/en/contact", true) }) } aria-current={ isActive("/en/contact", true) ? "page" : undefined }>
-Contact
-</Link>
+              <Link
+                href={hrefHome}
+                className={desktopLinkClass({ isActive: isActive(hrefHome, true) })}
+                aria-current={isActive(hrefHome, true) ? "page" : undefined}
+              >
+                Home
+              </Link>
+              <Link
+                href={hrefPricing}
+                className={desktopLinkClass({ isActive: isActive(hrefPricing, true) })}
+                aria-current={isActive(hrefPricing, true) ? "page" : undefined}
+              >
+                Pricing
+              </Link>
+              <Link
+                href={hrefHow}
+                className={desktopLinkClass({ isActive: isActive(hrefHow, true) })}
+                aria-current={isActive(hrefHow, true) ? "page" : undefined}
+              >
+                How it works
+              </Link>
+              <Link
+                href={hrefCompliance}
+                className={desktopLinkClass({ isActive: isActive(hrefCompliance, true) })}
+                aria-current={isActive(hrefCompliance, true) ? "page" : undefined}
+              >
+                Compliance &amp; Data
+              </Link>
+              <Link
+                href={hrefContact}
+                className={desktopLinkClass({ isActive: isActive(hrefContact, true) })}
+                aria-current={isActive(hrefContact, true) ? "page" : undefined}
+              >
+                Contact
+              </Link>
             </nav>
 
             <div className="gs-actions" aria-label="Actions">
               <Link href="/login" className="gs-cta gs-ctaPrimary">
                 Sign In
               </Link>
-              <a href="#request-demo" className="gs-cta gs-ctaSecondary">
+              <Link href={hrefRequestDemo} className="gs-cta gs-ctaSecondary">
                 Request demo
-              </a>
+              </Link>
             </div>
           </div>
 
           {/* Mobile */}
           <div className="gs-grid gs-mobile" style={{ position: "relative" }}>
-            <Link href="/en"
+            <Link
+              href={hrefHome}
               className="gs-brand"
               aria-label="GrandScope home"
               style={{ ["--gs-icon" as any]: `${iconSizeMobile}px` }}
@@ -355,9 +402,10 @@ Contact
 
             <div className="gs-centerControls">
               <button
-                aria-label="Open menu"
+                aria-label={open ? "Close menu" : "Open menu"}
                 aria-expanded={open}
                 aria-controls="gs-mobile-menu"
+                aria-haspopup="menu"
                 className="gs-hamburger"
                 onClick={() => setOpen((v) => !v)}
               >
@@ -401,26 +449,51 @@ Contact
               role="menu"
               aria-label="Main menu"
             >
-              <Link href="/en" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en", true) }) } aria-current={ isActive("/en", true) ? "page" : undefined }>
-Home
-</Link>
-              <Link href="/en/pricing" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/pricing", true) }) } aria-current={ isActive("/en/pricing", true) ? "page" : undefined }>
-Pricing
-</Link>
-              <Link href="/en/how-it-works" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/how-it-works", true) }) } aria-current={ isActive("/en/how-it-works", true) ? "page" : undefined }>
-How it works
-</Link>
-              <Link href="/en/compliance-data" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/compliance-data", true) }) } aria-current={ isActive("/en/compliance-data", true) ? "page" : undefined }>
-Compliance &amp; Data
-</Link>
-              <Link href="/en/contact" role="menuitem" className={ mobileLinkClass({ isActive: isActive("/en/contact", true) }) } aria-current={ isActive("/en/contact", true) ? "page" : undefined }>
-Contact
-</Link>
+              <Link
+                href={hrefHome}
+                role="menuitem"
+                className={mobileLinkClass({ isActive: isActive(hrefHome, true) })}
+                aria-current={isActive(hrefHome, true) ? "page" : undefined}
+              >
+                Home
+              </Link>
+              <Link
+                href={hrefPricing}
+                role="menuitem"
+                className={mobileLinkClass({ isActive: isActive(hrefPricing, true) })}
+                aria-current={isActive(hrefPricing, true) ? "page" : undefined}
+              >
+                Pricing
+              </Link>
+              <Link
+                href={hrefHow}
+                role="menuitem"
+                className={mobileLinkClass({ isActive: isActive(hrefHow, true) })}
+                aria-current={isActive(hrefHow, true) ? "page" : undefined}
+              >
+                How it works
+              </Link>
+              <Link
+                href={hrefCompliance}
+                role="menuitem"
+                className={mobileLinkClass({ isActive: isActive(hrefCompliance, true) })}
+                aria-current={isActive(hrefCompliance, true) ? "page" : undefined}
+              >
+                Compliance &amp; Data
+              </Link>
+              <Link
+                href={hrefContact}
+                role="menuitem"
+                className={mobileLinkClass({ isActive: isActive(hrefContact, true) })}
+                aria-current={isActive(hrefContact, true) ? "page" : undefined}
+              >
+                Contact
+              </Link>
 
               <div className="gs-mobile-actions">
-                <a href="#request-demo" className="gs-cta gs-ctaSecondary">
+                <Link href={hrefRequestDemo} className="gs-cta gs-ctaSecondary">
                   Request demo
-                </a>
+                </Link>
               </div>
             </div>
           )}
