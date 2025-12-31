@@ -120,6 +120,43 @@ function extractSupplierMeta(raw: any): SupplierMeta {
   return { supplierName, companyName, locale };
 }
 
+function extractSupplierMetaFromContext(payload: any): SupplierMeta {
+  if (!payload || typeof payload !== "object") return { supplierName: null, companyName: null, locale: null };
+
+  const pick = (obj: any, keys: string[]) => {
+    for (const k of keys) {
+      const v = obj?.[k];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return null;
+  };
+
+  const req = payload?.request ?? payload?.req ?? payload?.supplier_request ?? payload?.supplierRequest ?? {};
+  const rep = payload?.report ?? payload?.rep ?? {};
+  const item = payload?.report_item ?? payload?.reportItem ?? payload?.item ?? {};
+
+  const supplierName =
+    pick(req, ["supplier_name", "supplierName", "supplier", "name"]) ||
+    pick(item, ["supplier_name", "supplierName", "supplier", "name"]) ||
+    pick(payload, ["supplier_name", "supplierName"]) ||
+    pick(payload?.supplier, ["name", "supplier_name", "supplierName"]);
+
+  const companyName =
+    pick(req, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
+    pick(item, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
+    pick(payload, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
+    pick(payload?.company, ["name", "company_name", "companyName"]);
+
+  const locale =
+    pick(req, ["locale", "language", "lang", "supplier_locale", "supplierLanguage", "preferred_language", "preferredLanguage"]) ||
+    pick(payload?.supplier, ["locale", "language", "lang"]) ||
+    pick(rep, ["locale", "language", "lang"]) ||
+    pick(payload, ["locale", "language", "lang"]);
+
+  return { supplierName, companyName, locale };
+}
+
+
 function parseValidateReturn(raw: any): {
   request_id: string | null;
   cn_code: string | null;
@@ -520,11 +557,13 @@ export default function SupplierPortalForm({
   onSuccess,
   onMetaLoaded,
   localeOverride,
+  initialMeta,
 }: {
   token: string;
   onSuccess?: () => void;
   onMetaLoaded?: (meta: SupplierMeta) => void;
   localeOverride?: string | null;
+  initialMeta?: SupplierMeta | null;
 }) {
   const supabase = useMemo(() => getSupplierSupabase(token), [token]);
 
@@ -540,11 +579,18 @@ export default function SupplierPortalForm({
   const [cnCode, setCnCode] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
-  const [supplierName, setSupplierName] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string | null>(null);
-  const [supplierLocale, setSupplierLocale] = useState<string | null>(null);
+  const [supplierName, setSupplierName] = useState<string | null>(initialMeta?.supplierName ?? null);
+  const [companyName, setCompanyName] = useState<string | null>(initialMeta?.companyName ?? null);
+  const [supplierLocale, setSupplierLocale] = useState<string | null>(initialMeta?.locale ?? null);
 
   const { t } = useSupplierI18n(localeOverride ?? supplierLocale);
+
+  useEffect(() => {
+    if (!initialMeta) return;
+    setSupplierName((cur) => cur || initialMeta.supplierName || null);
+    setCompanyName((cur) => cur || initialMeta.companyName || null);
+    setSupplierLocale((cur) => cur || initialMeta.locale || null);
+  }, [initialMeta?.supplierName, initialMeta?.companyName, initialMeta?.locale]);
 
   const nowMs = useNow(1000);
   const supplierTimeZone = useMemo(() => getSupplierTimeZone(), []);
@@ -593,12 +639,37 @@ export default function SupplierPortalForm({
           }));
         }
 
-        const meta = extractSupplierMeta(raw);
+        const metaFromValidate = extractSupplierMeta(raw);
+
+        let metaFinal: SupplierMeta = {
+          supplierName: initialMeta?.supplierName ?? metaFromValidate.supplierName,
+          companyName: initialMeta?.companyName ?? metaFromValidate.companyName,
+          locale: initialMeta?.locale ?? metaFromValidate.locale,
+        };
+
+        try {
+          const { data: cData, error: cErr } = await supabase.rpc("get_supplier_portal_context" as any, { p_token: token } as any);
+          if (!cErr) {
+            const ctx = asSingleRow<any>(cData);
+            const ok = (ctx as any)?.ok === true || (ctx as any)?.status === "ok";
+            if (ok) {
+              const metaFromCtx = extractSupplierMetaFromContext(ctx);
+              metaFinal = {
+                supplierName: metaFromCtx.supplierName ?? metaFinal.supplierName,
+                companyName: metaFromCtx.companyName ?? metaFinal.companyName,
+                locale: metaFromCtx.locale ?? metaFinal.locale,
+              };
+            }
+          }
+        } catch {
+          // ignore
+        }
+
         if (!ignore) {
-          setSupplierName(meta.supplierName);
-          setCompanyName(meta.companyName);
-          setSupplierLocale(meta.locale);
-          if (onMetaLoadedRef.current) onMetaLoadedRef.current(meta);
+          setSupplierName(metaFinal.supplierName);
+          setCompanyName(metaFinal.companyName);
+          setSupplierLocale(metaFinal.locale);
+          if (onMetaLoadedRef.current) onMetaLoadedRef.current(metaFinal);
         }
 
         if (!ignore) setLoading(false);
@@ -631,7 +702,6 @@ export default function SupplierPortalForm({
 
     if (!id.installation_address.street.trim()) e["identity.installation_address.street"] = t("validation.required");
     if (!id.installation_address.city.trim()) e["identity.installation_address.city"] = t("validation.required");
-    if (!id.installation_address.postal.trim()) e["identity.installation_address.postal"] = t("validation.required");
     if (!id.installation_address.country.trim()) e["identity.installation_address.country"] = t("validation.required");
 
     if (!id.nace_code.trim()) e["identity.nace_code"] = t("validation.required");
@@ -641,9 +711,9 @@ export default function SupplierPortalForm({
     const hasLat = Boolean(id.coordinates.lat.trim());
     const hasLng = Boolean(id.coordinates.lng.trim());
 
-    // EU CBAM conditional requirement: UNLOCODE OR coordinates must be provided.
-    // If UNLOCODE is missing, require both latitude and longitude.
-    if (!hasUnlocode) {
+    // UNLOCODE and coordinates are optional. If the supplier provides coordinates,
+    // require both lat and lng and validate format.
+    if (!hasUnlocode && (hasLat || hasLng)) {
       if (!hasLat) e["identity.coordinates.lat"] = t("validation.required");
       else if (!isValidLatLng(id.coordinates.lat)) e["identity.coordinates.lat"] = t("validation.latlng");
 
@@ -651,7 +721,7 @@ export default function SupplierPortalForm({
       else if (!isValidLatLng(id.coordinates.lng)) e["identity.coordinates.lng"] = t("validation.latlng");
     }
 
-if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
+    if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
     else if (!isValidCnCode(goods.cn_code)) e["goods.cn_code"] = t("validation.cncode");
 
     if (!goods.trade_name.trim()) e["goods.trade_name"] = t("validation.required");
@@ -985,7 +1055,7 @@ if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
 
           <div className="gsx-row">
             <label className="gsx-field">
-              <FieldLabelWithInfo t={t} labelKey="form.identity.address.postal.label" required={true} meaningKey="form.identity.address.postal.help.meaning" exampleKey="form.identity.address.postal.help.example" />
+              <FieldLabelWithInfo t={t} labelKey="form.identity.address.postal.label" required={false} meaningKey="form.identity.address.postal.help.meaning" exampleKey="form.identity.address.postal.help.example" />
               <input className="gsx-input" value={input.identity.installation_address.postal} onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, installation_address: { ...cur.identity.installation_address, postal: e.target.value } } }))} />
               <FieldError msg={showErr("identity.installation_address.postal")} />
             </label>
@@ -1014,14 +1084,14 @@ if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
           {!input.identity.unlocode.trim() && (
             <div className="gsx-row">
               <label className="gsx-field">
-                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={true} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
+                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={false} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lat} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lat) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lat")} />
               </label>
 
               <label className="gsx-field">
-                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={true} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
+                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={false} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lng} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lng) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lng")} />

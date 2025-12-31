@@ -499,6 +499,7 @@ export default function SupplierTokenPage({ token, initialValid, initialError, i
                 onSuccess={onSuccess}
                 localeOverride={meta.locale}
                 onMetaLoaded={onMetaLoaded}
+                initialMeta={meta}
               />
             )}
           </div>
@@ -564,13 +565,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       if (ok) {
         const req = payload?.request || {};
         const rep = payload?.report || {};
+        const item = payload?.report_item || payload?.reportItem || payload?.item || {};
 
         const supplierName =
           (req?.supplier_name ?? req?.supplierName ?? req?.supplier ?? req?.name ?? null) ||
+          (item?.supplier_name ?? item?.supplierName ?? item?.supplier ?? item?.name ?? null) ||
           (payload?.supplier?.name ?? null);
 
         const companyName =
           (req?.company_name ?? req?.companyName ?? req?.company ?? req?.legal_name ?? req?.legalName ?? null) ||
+          (item?.company_name ?? item?.companyName ?? item?.company ?? item?.legal_name ?? item?.legalName ?? null) ||
           (payload?.company?.name ?? null);
 
         const locale =
