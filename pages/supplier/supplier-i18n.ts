@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 
 export type SupplierLocale = "en" | "zh" | "tr" | "fr" | "de" | "es" | "it" | "pl" | "pt" | "ro" | "nl" | "sv" | "da" | "fi" | "cs" | "sk" | "sl" | "hr" | "bg" | "hu" | "el" | "ga" | "mt" | "lt" | "lv" | "et" | "ru" | "hi" | "ko" | "uk";
 
+
+
+export type TFunc = (key: string, vars?: Record<string, string>) => string;
 const TRANSLATIONS: Record<SupplierLocale, Record<string, string>> = {
   en: {
     "common.info": "More info",
