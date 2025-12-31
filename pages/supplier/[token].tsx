@@ -1,6 +1,7 @@
 // FILE: marketing/pages/supplier/[token].tsx
 import React, { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
+import type { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
@@ -699,21 +700,25 @@ function SupplierPortalForm({
   );
 }
 
-export default function SupplierTokenPage() {
+export default function SupplierTokenPage({ initialRequest, initialError }: { initialRequest: SupplierRequestPayload | null; initialError: string | null; }) {
   const router = useRouter();
   const token = useMemo(() => {
     const t = router.query?.token;
     return typeof t === "string" ? t : "";
   }, [router.query]);
 
-  const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [err, setErr] = useState<string | null>(null);
-  const [request, setRequest] = useState<SupplierRequestPayload | null>(null);
-
-  useEffect(() => {
+  const [loadState, setLoadState] = useState<LoadState>(() => {
+    if (initialRequest) return "ready";
+    if (initialError) return "error";
+    return "idle";
+  });
+  const [err, setErr] = useState<string | null>(initialError || null);
+  const [request, setRequest] = useState<SupplierRequestPayload | null>(initialRequest || null);
+useEffect(() => {
     let alive = true;
     async function load() {
       if (!token) return;
+      if (initialRequest || initialError) return;
       setLoadState("loading");
       setErr(null);
 
@@ -782,4 +787,32 @@ export default function SupplierTokenPage() {
     </Panel>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const tokenParam = ctx.params?.token;
+  const token = typeof tokenParam === "string" ? tokenParam : "";
+
+  if (!token) {
+    return { props: { initialRequest: null, initialError: "Invalid link." } };
+  }
+
+  try {
+    const supabase = getSupabase();
+
+    const res = await tryRpc<SupplierRequestPayload>(supabase, [
+      { fn: "supplier_portal_init", args: { p_token: token } },
+      { fn: "supplier_validate_token", args: { p_token: token } },
+      { fn: "supplier_request_by_token", args: { p_token: token } }
+    ]);
+
+    if (!res.ok) {
+      return { props: { initialRequest: null, initialError: "Invalid or expired link." } };
+    }
+
+    return { props: { initialRequest: res.data || null, initialError: null } };
+  } catch (e: any) {
+    return { props: { initialRequest: null, initialError: "Unable to load supplier request." } };
+  }
+};
+
 // FILE: marketing/pages/supplier/[token].tsx
