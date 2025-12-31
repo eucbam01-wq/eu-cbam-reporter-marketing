@@ -897,7 +897,7 @@ export default function SupplierPortalForm({
 
   const companyDisplay = companyName || supplierName || "";
 
-  const showErr = (k: string) => (touched["all"] ? errors[k] ?? null : null);
+  const showErr = (k: string) => errors[k] ?? null;
 
   return (
     <form onSubmit={onSubmit} className="gsx-form">
