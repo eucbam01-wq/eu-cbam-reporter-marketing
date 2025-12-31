@@ -719,7 +719,7 @@ export default function SupplierPortalForm({
     return e;
   }, [input, t, evidenceFiles]);
 
-  const canSubmit = submitStatus !== "submitting";
+  const canSubmit = Object.keys(errors).length === 0 && submitStatus !== "submitting";
 
   function markTouched(key: string) {
     setTouched((cur) => ({ ...cur, [key]: true }));
