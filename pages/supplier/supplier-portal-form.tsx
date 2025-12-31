@@ -97,7 +97,7 @@ function classifyInvalidReason(msg: string): InvalidReason {
 function extractSupplierMeta(raw: any): SupplierMeta {
   if (!raw || typeof raw !== "object") return { supplierName: null, companyName: null, locale: null };
 
-  const pick = (obj: any, keys: string[]) => {
+  const pickDirect = (obj: any, keys: string[]) => {
     for (const k of keys) {
       const v = obj?.[k];
       if (typeof v === "string" && v.trim()) return v.trim();
@@ -105,33 +105,41 @@ function extractSupplierMeta(raw: any): SupplierMeta {
     return null;
   };
 
-  const candidates: any[] = [
-    raw,
-    raw.request,
-    raw.report_item,
-    raw.reportItem,
-    raw.item,
-    raw.report_item?.item,
-    raw.reportItem?.item,
-    raw.supplier,
-    raw.company,
-    raw.report,
-  ].filter(Boolean);
+  const deepPick = (obj: any, keys: string[], maxDepth = 6): string | null => {
+    if (!obj || typeof obj !== "object") return null;
 
-  const pickFirst = (keys: string[]) => {
-    for (const c of candidates) {
-      const v = pick(c, keys);
-      if (v) return v;
+    const seen = new Set<any>();
+    const q: Array<{ v: any; depth: number }> = [{ v: obj, depth: 0 }];
+
+    while (q.length) {
+      const cur = q.shift();
+      if (!cur) break;
+
+      const { v, depth } = cur;
+      if (!v || typeof v !== "object") continue;
+      if (seen.has(v)) continue;
+      seen.add(v);
+
+      const direct = pickDirect(v, keys);
+      if (direct) return direct;
+
+      if (depth >= maxDepth) continue;
+
+      const values = Array.isArray(v) ? v : Object.values(v);
+      for (const child of values) {
+        if (child && typeof child === "object") q.push({ v: child, depth: depth + 1 });
+      }
     }
+
     return null;
   };
 
   const supplierName =
-    pickFirst(["supplier_name", "supplierName", "supplier_legal_name", "supplierLegalName"]) ||
-    pick(raw?.supplier, ["name", "supplier_name", "supplierName"]);
+    deepPick(raw, ["supplier_name", "supplierName", "supplier_legal_name", "supplierLegalName"]) ||
+    pickDirect(raw?.supplier, ["name", "supplier_name", "supplierName"]);
 
-  const companyName =
-    pickFirst([
+  const companyNameRaw =
+    deepPick(raw, [
       "company_name",
       "companyName",
       "company_legal_name",
@@ -142,10 +150,10 @@ function extractSupplierMeta(raw: any): SupplierMeta {
       "importerName",
       "organization_name",
       "organizationName",
-    ]) || pick(raw?.company, ["name", "company_name", "companyName"]);
+    ]) || pickDirect(raw?.company, ["name", "company_name", "companyName"]);
 
   const locale =
-    pickFirst([
+    deepPick(raw, [
       "locale",
       "language",
       "lang",
@@ -154,11 +162,14 @@ function extractSupplierMeta(raw: any): SupplierMeta {
       "preferred_language",
       "preferredLanguage",
     ]) ||
-    pick(raw?.supplier, ["locale", "language", "lang"]) ||
-    pick(raw?.report, ["locale", "language", "lang"]);
+    pickDirect(raw?.supplier, ["locale", "language", "lang"]) ||
+    pickDirect(raw?.report, ["locale", "language", "lang"]);
+
+  const companyName = companyNameRaw || supplierName;
 
   return { supplierName, companyName, locale };
 }
+
 
 function parseValidateReturn(raw: any): {
   request_id: string | null;

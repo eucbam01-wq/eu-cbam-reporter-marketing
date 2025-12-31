@@ -499,7 +499,7 @@ export default function SupplierTokenPage({ token, initialValid, initialError, i
                 onSuccess={onSuccess}
                 localeOverride={meta.locale}
                 onMetaLoaded={onMetaLoaded}
-                initialMeta={meta}
+                initialMeta={initialMeta}
               />
             )}
           </div>
@@ -565,27 +565,45 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       if (ok) {
         const req = payload?.request || {};
         const rep = payload?.report || {};
-        const item = payload?.report_item || payload?.reportItem || payload?.item || {};
+
+        const item =
+          payload?.report_item ??
+          payload?.reportItem ??
+          payload?.item ??
+          req?.report_item ??
+          req?.reportItem ??
+          req?.item ??
+          null;
 
         const supplierName =
           (req?.supplier_name ?? req?.supplierName ?? req?.supplier ?? req?.name ?? null) ||
           (item?.supplier_name ?? item?.supplierName ?? item?.supplier ?? item?.name ?? null) ||
+          (payload?.supplier_name ?? payload?.supplierName ?? null) ||
           (payload?.supplier?.name ?? null);
 
         const companyName =
           (req?.company_name ?? req?.companyName ?? req?.company ?? req?.legal_name ?? req?.legalName ?? null) ||
+          (payload?.company_name ?? payload?.companyName ?? null) ||
+          (payload?.company?.name ?? null) ||
           (item?.company_name ?? item?.companyName ?? item?.company ?? item?.legal_name ?? item?.legalName ?? null) ||
-          (payload?.company?.name ?? null);
+          (item?.supplier_name ?? item?.supplierName ?? item?.supplier ?? item?.name ?? null) ||
+          null;
 
         const locale =
           (req?.locale ?? req?.language ?? req?.lang ?? req?.supplier_locale ?? req?.supplierLanguage ?? req?.preferred_language ?? req?.preferredLanguage ?? null) ||
           (payload?.supplier?.locale ?? payload?.supplier?.language ?? null) ||
           (rep?.locale ?? null);
 
+        const supplierNameNorm =
+          typeof supplierName === "string" && supplierName.trim() ? supplierName.trim() : null;
+        const companyNameNorm =
+          typeof companyName === "string" && companyName.trim() ? companyName.trim() : null;
+        const localeNorm = typeof locale === "string" && locale.trim() ? locale.trim() : null;
+
         meta = {
-          supplierName: typeof supplierName === "string" && supplierName.trim() ? supplierName.trim() : null,
-          companyName: typeof companyName === "string" && companyName.trim() ? companyName.trim() : null,
-          locale: typeof locale === "string" && locale.trim() ? locale.trim() : null,
+          supplierName: supplierNameNorm,
+          companyName: companyNameNorm ?? supplierNameNorm,
+          locale: localeNorm,
         };
       }
     }
