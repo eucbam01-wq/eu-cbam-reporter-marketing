@@ -83,7 +83,7 @@ export default function SupplierTokenPage({ token, initialValid, initialError, i
         <meta name="robots" content="noindex,nofollow,noarchive" />
       </Head>
 
-      <style>`
+      <style>{`
 .gsx-root{
   --brand:#306263;
   --support:#4073AF;
@@ -463,7 +463,7 @@ export default function SupplierTokenPage({ token, initialValid, initialError, i
   border-color: rgba(218,33,49,.55);
   box-shadow: 0 0 0 3px rgba(218,33,49,.14);
 }
-`</style>
+`}</style>
 
       <div className="gsx-container">
         <section className="gsx-hero" aria-label={t("page.aria_hero")}>
