@@ -631,6 +631,7 @@ export default function SupplierPortalForm({
 
     if (!id.installation_address.street.trim()) e["identity.installation_address.street"] = t("validation.required");
     if (!id.installation_address.city.trim()) e["identity.installation_address.city"] = t("validation.required");
+    if (!id.installation_address.postal.trim()) e["identity.installation_address.postal"] = t("validation.required");
     if (!id.installation_address.country.trim()) e["identity.installation_address.country"] = t("validation.required");
 
     if (!id.nace_code.trim()) e["identity.nace_code"] = t("validation.required");
@@ -640,9 +641,9 @@ export default function SupplierPortalForm({
     const hasLat = Boolean(id.coordinates.lat.trim());
     const hasLng = Boolean(id.coordinates.lng.trim());
 
-    // UNLOCODE and coordinates are optional. If the supplier provides coordinates,
-    // require both lat and lng and validate format.
-    if (!hasUnlocode && (hasLat || hasLng)) {
+    // EU CBAM conditional requirement: UNLOCODE OR coordinates must be provided.
+    // If UNLOCODE is missing, require both latitude and longitude.
+    if (!hasUnlocode) {
       if (!hasLat) e["identity.coordinates.lat"] = t("validation.required");
       else if (!isValidLatLng(id.coordinates.lat)) e["identity.coordinates.lat"] = t("validation.latlng");
 
@@ -650,7 +651,7 @@ export default function SupplierPortalForm({
       else if (!isValidLatLng(id.coordinates.lng)) e["identity.coordinates.lng"] = t("validation.latlng");
     }
 
-    if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
+if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
     else if (!isValidCnCode(goods.cn_code)) e["goods.cn_code"] = t("validation.cncode");
 
     if (!goods.trade_name.trim()) e["goods.trade_name"] = t("validation.required");
@@ -984,7 +985,7 @@ export default function SupplierPortalForm({
 
           <div className="gsx-row">
             <label className="gsx-field">
-              <FieldLabelWithInfo t={t} labelKey="form.identity.address.postal.label" required={false} meaningKey="form.identity.address.postal.help.meaning" exampleKey="form.identity.address.postal.help.example" />
+              <FieldLabelWithInfo t={t} labelKey="form.identity.address.postal.label" required={true} meaningKey="form.identity.address.postal.help.meaning" exampleKey="form.identity.address.postal.help.example" />
               <input className="gsx-input" value={input.identity.installation_address.postal} onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, installation_address: { ...cur.identity.installation_address, postal: e.target.value } } }))} />
               <FieldError msg={showErr("identity.installation_address.postal")} />
             </label>
@@ -1013,14 +1014,14 @@ export default function SupplierPortalForm({
           {!input.identity.unlocode.trim() && (
             <div className="gsx-row">
               <label className="gsx-field">
-                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={false} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
+                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={true} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lat} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lat) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lat")} />
               </label>
 
               <label className="gsx-field">
-                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={false} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
+                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={true} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lng} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lng) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lng")} />
