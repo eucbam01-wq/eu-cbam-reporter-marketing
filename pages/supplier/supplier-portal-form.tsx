@@ -95,6 +95,19 @@ function classifyInvalidReason(msg: string): InvalidReason {
 }
 
 function extractSupplierMeta(raw: any): SupplierMeta {
+  if (!raw) return { supplierName: null, companyName: null, locale: null };
+
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (s.startsWith("{") || s.startsWith("[")) {
+      try {
+        raw = JSON.parse(s);
+      } catch {
+        // ignore JSON parse failures
+      }
+    }
+  }
+
   if (!raw || typeof raw !== "object") return { supplierName: null, companyName: null, locale: null };
 
   const pick = (obj: any, keys: string[]) => {
@@ -105,13 +118,18 @@ function extractSupplierMeta(raw: any): SupplierMeta {
     return null;
   };
 
+  const reportItem =
+    raw?.report_item ?? raw?.reportItem ?? raw?.report_item_context ?? raw?.reportItemContext ?? raw?.item;
+
   const supplierName =
     pick(raw, ["supplier_name", "supplierName", "supplier", "name"]) ||
-    pick(raw?.supplier, ["name", "supplier_name", "supplierName"]);
+    pick(raw?.supplier, ["name", "supplier_name", "supplierName"]) ||
+    pick(reportItem, ["supplier_name", "supplierName", "company_name", "companyName", "name"]);
 
   const companyName =
     pick(raw, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
-    pick(raw?.company, ["name", "company_name", "companyName"]);
+    pick(raw?.company, ["name", "company_name", "companyName"]) ||
+    pick(reportItem, ["company_name", "companyName", "supplier_name", "supplierName", "name"]);
 
   const locale =
     pick(raw, ["locale", "language", "lang", "supplier_locale", "supplierLanguage", "preferred_language", "preferredLanguage"]) ||
@@ -120,41 +138,6 @@ function extractSupplierMeta(raw: any): SupplierMeta {
   return { supplierName, companyName, locale };
 }
 
-function extractSupplierMetaFromContext(payload: any): SupplierMeta {
-  if (!payload || typeof payload !== "object") return { supplierName: null, companyName: null, locale: null };
-
-  const pick = (obj: any, keys: string[]) => {
-    for (const k of keys) {
-      const v = obj?.[k];
-      if (typeof v === "string" && v.trim()) return v.trim();
-    }
-    return null;
-  };
-
-  const req = payload?.request ?? payload?.req ?? payload?.supplier_request ?? payload?.supplierRequest ?? {};
-  const rep = payload?.report ?? payload?.rep ?? {};
-  const item = payload?.report_item ?? payload?.reportItem ?? payload?.item ?? {};
-
-  const supplierName =
-    pick(req, ["supplier_name", "supplierName", "supplier", "name"]) ||
-    pick(item, ["supplier_name", "supplierName", "supplier", "name"]) ||
-    pick(payload, ["supplier_name", "supplierName"]) ||
-    pick(payload?.supplier, ["name", "supplier_name", "supplierName"]);
-
-  const companyName =
-    pick(req, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
-    pick(item, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
-    pick(payload, ["company_name", "companyName", "company", "legal_name", "legalName"]) ||
-    pick(payload?.company, ["name", "company_name", "companyName"]);
-
-  const locale =
-    pick(req, ["locale", "language", "lang", "supplier_locale", "supplierLanguage", "preferred_language", "preferredLanguage"]) ||
-    pick(payload?.supplier, ["locale", "language", "lang"]) ||
-    pick(rep, ["locale", "language", "lang"]) ||
-    pick(payload, ["locale", "language", "lang"]);
-
-  return { supplierName, companyName, locale };
-}
 
 
 function parseValidateReturn(raw: any): {
@@ -557,13 +540,11 @@ export default function SupplierPortalForm({
   onSuccess,
   onMetaLoaded,
   localeOverride,
-  initialMeta,
 }: {
   token: string;
   onSuccess?: () => void;
   onMetaLoaded?: (meta: SupplierMeta) => void;
   localeOverride?: string | null;
-  initialMeta?: SupplierMeta | null;
 }) {
   const supabase = useMemo(() => getSupplierSupabase(token), [token]);
 
@@ -579,18 +560,11 @@ export default function SupplierPortalForm({
   const [cnCode, setCnCode] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
-  const [supplierName, setSupplierName] = useState<string | null>(initialMeta?.supplierName ?? null);
-  const [companyName, setCompanyName] = useState<string | null>(initialMeta?.companyName ?? null);
-  const [supplierLocale, setSupplierLocale] = useState<string | null>(initialMeta?.locale ?? null);
+  const [supplierName, setSupplierName] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [supplierLocale, setSupplierLocale] = useState<string | null>(null);
 
   const { t } = useSupplierI18n(localeOverride ?? supplierLocale);
-
-  useEffect(() => {
-    if (!initialMeta) return;
-    setSupplierName((cur) => cur || initialMeta.supplierName || null);
-    setCompanyName((cur) => cur || initialMeta.companyName || null);
-    setSupplierLocale((cur) => cur || initialMeta.locale || null);
-  }, [initialMeta?.supplierName, initialMeta?.companyName, initialMeta?.locale]);
 
   const nowMs = useNow(1000);
   const supplierTimeZone = useMemo(() => getSupplierTimeZone(), []);
@@ -639,37 +613,33 @@ export default function SupplierPortalForm({
           }));
         }
 
-        const metaFromValidate = extractSupplierMeta(raw);
-
-        let metaFinal: SupplierMeta = {
-          supplierName: initialMeta?.supplierName ?? metaFromValidate.supplierName,
-          companyName: initialMeta?.companyName ?? metaFromValidate.companyName,
-          locale: initialMeta?.locale ?? metaFromValidate.locale,
-        };
+        let ctxRaw: any = null;
 
         try {
-          const { data: cData, error: cErr } = await supabase.rpc("get_supplier_portal_context" as any, { p_token: token } as any);
-          if (!cErr) {
-            const ctx = asSingleRow<any>(cData);
-            const ok = (ctx as any)?.ok === true || (ctx as any)?.status === "ok";
-            if (ok) {
-              const metaFromCtx = extractSupplierMetaFromContext(ctx);
-              metaFinal = {
-                supplierName: metaFromCtx.supplierName ?? metaFinal.supplierName,
-                companyName: metaFromCtx.companyName ?? metaFinal.companyName,
-                locale: metaFromCtx.locale ?? metaFinal.locale,
-              };
-            }
-          }
+          const { data: cData, error: cErr } = await supabase.rpc(
+            "get_supplier_portal_context" as any,
+            { p_token: token } as any
+          );
+
+          if (!cErr) ctxRaw = asSingleRow<any>(cData);
         } catch {
-          // ignore
+          // ignore context load failures
         }
 
+        const metaFromValidate = extractSupplierMeta(raw);
+        const metaFromCtx = extractSupplierMeta(ctxRaw);
+
+        const mergedMeta: SupplierMeta = {
+          supplierName: metaFromCtx.supplierName ?? metaFromValidate.supplierName,
+          companyName: metaFromCtx.companyName ?? metaFromValidate.companyName,
+          locale: metaFromCtx.locale ?? metaFromValidate.locale,
+        };
+
         if (!ignore) {
-          setSupplierName(metaFinal.supplierName);
-          setCompanyName(metaFinal.companyName);
-          setSupplierLocale(metaFinal.locale);
-          if (onMetaLoadedRef.current) onMetaLoadedRef.current(metaFinal);
+          setSupplierName(mergedMeta.supplierName);
+          setCompanyName(mergedMeta.companyName);
+          setSupplierLocale(mergedMeta.locale);
+          if (onMetaLoadedRef.current) onMetaLoadedRef.current(mergedMeta);
         }
 
         if (!ignore) setLoading(false);
