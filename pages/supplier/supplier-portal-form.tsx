@@ -185,6 +185,12 @@ function parseValidateReturn(raw: any): {
 
   if (typeof raw === "string") {
     const s = raw.trim();
+    // DB returns a bare UUID string for validate_supplier_token on success.
+    // Treat that as request_id directly.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+      request_id = s;
+      return { request_id, cn_code, expires_at, status };
+    }
     const m = s.match(/^\((.*)\)$/);
     const inner = m ? m[1] : s;
 
@@ -666,6 +672,13 @@ export default function SupplierPortalForm({
           const ctxRes = await supabase.rpc("get_supplier_portal_context" as any, { p_token: token } as any);
           if (!ctxRes.error) {
             const payload = asSingleRow<any>(ctxRes.data);
+            // Flat context: use as authoritative ids/expiry if validate returned only UUID.
+            const ctxReq = (payload as any)?.supplier_request_id;
+            const ctxExp = (payload as any)?.expires_at;
+            if (!ignore) {
+              if (!requestId && typeof ctxReq === "string" && ctxReq) setRequestId(ctxReq);
+              if (!expiresAt && typeof ctxExp === "string" && ctxExp) setExpiresAt(ctxExp);
+            }
             const metaFromContext = extractSupplierMeta(payload);
 
             if (!ignore) {
