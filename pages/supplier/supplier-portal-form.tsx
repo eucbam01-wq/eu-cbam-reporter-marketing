@@ -214,11 +214,6 @@ function parseValidateReturn(raw: any): {
 
     const cleaned = parts.map((p) => (typeof p === "string" ? p.trim() : p));
 
-    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (cleaned.length === 1 && typeof cleaned[0] === "string" && uuidRe.test(cleaned[0])) {
-      request_id = cleaned[0];
-    }
-
     if (cleaned.length >= 3) {
       request_id = (cleaned[0] ?? null) as any;
       cn_code = (cleaned[1] ?? null) as any;
@@ -845,7 +840,7 @@ export default function SupplierPortalForm({
 
     setEvidenceFiles((cur) => [...cur.filter((x) => x.purpose !== "scope2_actual_evidence"), ref]);
 
-    return null;
+    return ref;
 
   }
 
