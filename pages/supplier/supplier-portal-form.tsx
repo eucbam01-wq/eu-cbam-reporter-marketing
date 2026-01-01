@@ -808,14 +808,14 @@ export default function SupplierPortalForm({
   }
 
   async function uploadScope2EvidenceIfNeeded(): Promise<EvidenceFileRef | null> {
-    if (!requestId) return;
-    if (input.scope2.source_type !== "actual") return;
+    if (!requestId) return null;
+    if (input.scope2.source_type !== "actual") return null;
 
     const existing = evidenceFiles.find((x) => x.purpose === "scope2_actual_evidence");
-    if (existing) return;
+    if (existing) return null;
 
     const f = input.scope2.evidence_file;
-    if (!f) return;
+    if (!f) return null;
 
     const bucket = (process.env.NEXT_PUBLIC_SUPABASE_EVIDENCE_BUCKET as string | undefined) || "supplier-evidence";
     const safeName = (f.name || "evidence").replace(/[^a-zA-Z0-9._-]/g, "_");
