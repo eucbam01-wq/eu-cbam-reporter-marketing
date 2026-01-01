@@ -529,26 +529,14 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
     const { data, error } = await supabase.rpc("validate_supplier_token" as any, { p_token: token } as any);
 
-    if (error) {
+    const supplierRequestId = Array.isArray(data) ? data[0] : data;
+
+    if (error || !supplierRequestId) {
       return {
         props: {
           token,
           initialValid: false,
           initialError: "Invalid or expired link.",
-          initialMeta: { supplierName: null, companyName: null, locale: null },
-        },
-      };
-    }
-
-    const row = Array.isArray(data) ? data[0] : data;
-    const status = row?.status ?? null;
-
-    if (status !== "valid") {
-      return {
-        props: {
-          token,
-          initialValid: false,
-          initialError: row?.error || "Invalid or expired link.",
           initialMeta: { supplierName: null, companyName: null, locale: null },
         },
       };
@@ -560,52 +548,22 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     const ctxRes = await supabase.rpc("get_supplier_portal_context" as any, { p_token: token } as any);
     if (!ctxRes.error) {
       const payload = Array.isArray(ctxRes.data) ? ctxRes.data[0] : ctxRes.data;
-      const ok = payload?.ok === true;
 
-      if (ok) {
-        const req = payload?.request || {};
-        const rep = payload?.report || {};
+      const supplierName = payload?.supplier_name ?? payload?.supplierName ?? null;
+      const companyName = payload?.company_name ?? payload?.companyName ?? null;
+      const locale = payload?.locale ?? payload?.language ?? payload?.lang ?? null;
 
-        const item =
-          payload?.report_item ??
-          payload?.reportItem ??
-          payload?.item ??
-          req?.report_item ??
-          req?.reportItem ??
-          req?.item ??
-          null;
+      const supplierNameNorm =
+        typeof supplierName === "string" && supplierName.trim() ? supplierName.trim() : null;
+      const companyNameNorm =
+        typeof companyName === "string" && companyName.trim() ? companyName.trim() : null;
+      const localeNorm = typeof locale === "string" && locale.trim() ? locale.trim() : null;
 
-        const supplierName =
-          (req?.supplier_name ?? req?.supplierName ?? req?.supplier ?? req?.name ?? null) ||
-          (item?.supplier_name ?? item?.supplierName ?? item?.supplier ?? item?.name ?? null) ||
-          (payload?.supplier_name ?? payload?.supplierName ?? null) ||
-          (payload?.supplier?.name ?? null);
-
-        const companyName =
-          (req?.company_name ?? req?.companyName ?? req?.company ?? req?.legal_name ?? req?.legalName ?? null) ||
-          (payload?.company_name ?? payload?.companyName ?? null) ||
-          (payload?.company?.name ?? null) ||
-          (item?.company_name ?? item?.companyName ?? item?.company ?? item?.legal_name ?? item?.legalName ?? null) ||
-          (item?.supplier_name ?? item?.supplierName ?? item?.supplier ?? item?.name ?? null) ||
-          null;
-
-        const locale =
-          (req?.locale ?? req?.language ?? req?.lang ?? req?.supplier_locale ?? req?.supplierLanguage ?? req?.preferred_language ?? req?.preferredLanguage ?? null) ||
-          (payload?.supplier?.locale ?? payload?.supplier?.language ?? null) ||
-          (rep?.locale ?? null);
-
-        const supplierNameNorm =
-          typeof supplierName === "string" && supplierName.trim() ? supplierName.trim() : null;
-        const companyNameNorm =
-          typeof companyName === "string" && companyName.trim() ? companyName.trim() : null;
-        const localeNorm = typeof locale === "string" && locale.trim() ? locale.trim() : null;
-
-        meta = {
-          supplierName: supplierNameNorm,
-          companyName: companyNameNorm ?? supplierNameNorm,
-          locale: localeNorm,
-        };
-      }
+      meta = {
+        supplierName: supplierNameNorm,
+        companyName: companyNameNorm ?? supplierNameNorm,
+        locale: localeNorm,
+      };
     }
 
     return {
