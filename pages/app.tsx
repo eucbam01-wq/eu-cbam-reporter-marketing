@@ -36,7 +36,7 @@ function formatEUR(value: number | null | undefined) {
 function formatNumber(value: number | null | undefined, maxFractionDigits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return "--";
   try {
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(value);
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: maxFractionDigits }).format(value);
   } catch {
     return value.toFixed(Math.min(2, Math.max(0, maxFractionDigits)));
   }
