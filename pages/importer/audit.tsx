@@ -11,13 +11,23 @@ function getSupabase() {
   return createClient(url, anon);
 }
 
+type EvidenceFile = {
+  bucket?: string;
+  path?: string;
+  name?: string;
+  mime?: string;
+  mimetype?: string;
+  size?: number;
+  purpose?: string;
+};
+
 type AuditRow = {
   submission_id: string;
   supplier_request_id: string;
   submitted_at: string;
   scope2_source_type: string | null;
   evidence_file_count: number;
-  evidence_files: any | null;
+  evidence_files: EvidenceFile[] | null;
 };
 
 export default function ImporterAuditPage() {
@@ -25,6 +35,9 @@ export default function ImporterAuditPage() {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +64,7 @@ export default function ImporterAuditPage() {
               submitted_at: r.submitted_at,
               scope2_source_type: r.scope2_source_type ?? null,
               evidence_file_count: Number(r.evidence_file_count ?? 0),
-              evidence_files: r.evidence_files ?? null,
+              evidence_files: (r.evidence_files ?? null) as EvidenceFile[] | null,
             }))
           );
           setLoading(false);
@@ -69,6 +82,21 @@ export default function ImporterAuditPage() {
       cancelled = true;
     };
   }, [supabase]);
+
+  async function openEvidenceSignedUrl(bucket: string, path: string, key: string) {
+    setBusyKey(key);
+    setToast(null);
+    try {
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60);
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error("Failed to create signed URL");
+      window.open(data.signedUrl, "_blank", "noreferrer");
+    } catch (e: any) {
+      setToast(e?.message ?? "Failed to open evidence");
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   return (
     <div className="gsx-auditRoot">
@@ -104,6 +132,31 @@ export default function ImporterAuditPage() {
         }
         .gsx-muted{ color:#6B7280; }
         .gsx-link{ color:#111827; text-decoration:underline; }
+        .gsx-pill{
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          padding:6px 10px;
+          border-radius:999px;
+          border:1px solid #E5E7EB;
+          background:#fff;
+          font-size:12px;
+          cursor:pointer;
+        }
+        .gsx-pill[disabled]{
+          opacity:.6;
+          cursor:not-allowed;
+        }
+        .gsx-toast{
+          margin:10px 0 0;
+          color:#6B7280;
+          font-size:13px;
+        }
+        .gsx-evidenceList{
+          display:flex;
+          flex-direction:column;
+          gap:6px;
+        }
       `}</style>
 
       <main className="gsx-shell">
@@ -115,6 +168,7 @@ export default function ImporterAuditPage() {
         <section className="gsx-card">
           {loading ? <div className="gsx-muted">Loading...</div> : null}
           {error ? <div className="gsx-muted">{error}</div> : null}
+          {toast ? <div className="gsx-toast">{toast}</div> : null}
 
           {!loading && !error ? (
             <table className="gsx-table">
@@ -124,7 +178,7 @@ export default function ImporterAuditPage() {
                   <th>Supplier request</th>
                   <th>Submitted at</th>
                   <th>Scope 2 source</th>
-                  <th>Evidence files</th>
+                  <th>Evidence</th>
                 </tr>
               </thead>
               <tbody>
@@ -134,7 +188,33 @@ export default function ImporterAuditPage() {
                     <td>{r.supplier_request_id}</td>
                     <td>{r.submitted_at}</td>
                     <td>{r.scope2_source_type ?? "-"}</td>
-                    <td>{r.evidence_file_count}</td>
+                    <td>
+                      {r.evidence_files && r.evidence_files.length ? (
+                        <div className="gsx-evidenceList">
+                          {r.evidence_files.map((ev, idx) => {
+                            const bucket = ev.bucket || "supplier-evidence";
+                            const path = ev.path || "";
+                            const name = ev.name || path.split("/").pop() || "evidence.pdf";
+                            const key = `${r.submission_id}:${idx}`;
+                            const disabled = !path || busyKey === key;
+                            return (
+                              <button
+                                key={key}
+                                className="gsx-pill"
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => openEvidenceSignedUrl(bucket, path, key)}
+                              >
+                                {busyKey === key ? "Opening..." : "Open PDF"}
+                                <span className="gsx-muted">{name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="gsx-muted">0</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
