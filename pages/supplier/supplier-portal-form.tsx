@@ -5,34 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { type SupplierMeta, useSupplierI18n, type TFunc } from "../../src/supplier-i18n";
 
-
-function normalizePayloadForSubmit(p: any) {
-  const out = JSON.parse(JSON.stringify(p ?? {}));
-  const id = out?.identity ?? {};
-  const unlocode = (id.unlocode ?? "").toString().trim();
-
-  if (!unlocode) {
-    const latRaw = (id.lat ?? id.coordinates?.lat ?? "").toString().trim();
-    const lngRaw = (id.lng ?? id.coordinates?.lng ?? "").toString().trim();
-
-    if (latRaw || lngRaw) {
-      out.identity = {
-        ...id,
-        unlocode: "",
-        coordinates: { lat: latRaw, lng: lngRaw }
-      };
-      delete out.identity.lat;
-      delete out.identity.lng;
-    }
-  } else {
-    out.identity = { ...id, unlocode };
-    // If UNLOCODE is provided, coordinates are not required; keep as-is or remove if you want strictness.
-  }
-
-  return out;
-}
-
-
 type PrecursorRow = {
   cn_code: string;
   quantity_tonnes: string;
@@ -750,17 +722,21 @@ export default function SupplierPortalForm({
     else if (!isValidNace(id.nace_code)) e["identity.nace_code"] = t("validation.nace");
 
     const hasUnlocode = Boolean(id.unlocode.trim());
-    const hasLat = Boolean(id.coordinates.lat.trim());
-    const hasLng = Boolean(id.coordinates.lng.trim());
 
-    // UNLOCODE and coordinates are optional. If the supplier provides coordinates,
-    // require both lat and lng and validate format.
-    if (!hasUnlocode && (hasLat || hasLng)) {
+    const latVal = ((id as any)?.coordinates?.lat ?? (id as any)?.lat ?? "").toString().trim();
+    const lngVal = ((id as any)?.coordinates?.lng ?? (id as any)?.lng ?? "").toString().trim();
+
+    const hasLat = Boolean(latVal);
+    const hasLng = Boolean(lngVal);
+
+    // Location is legally required: provide UNLOCODE OR coordinates.
+    // If UNLOCODE is missing, require both lat and lng and validate format.
+    if (!hasUnlocode) {
       if (!hasLat) e["identity.coordinates.lat"] = t("validation.required");
-      else if (!isValidLatLng(id.coordinates.lat)) e["identity.coordinates.lat"] = t("validation.latlng");
+      else if (!isValidLatLng(latVal)) e["identity.coordinates.lat"] = t("validation.latlng");
 
       if (!hasLng) e["identity.coordinates.lng"] = t("validation.required");
-      else if (!isValidLatLng(id.coordinates.lng)) e["identity.coordinates.lng"] = t("validation.latlng");
+      else if (!isValidLatLng(lngVal)) e["identity.coordinates.lng"] = t("validation.latlng");
     }
 
     if (!goods.cn_code.trim()) e["goods.cn_code"] = t("validation.required");
@@ -891,7 +867,28 @@ export default function SupplierPortalForm({
       const s1 = input.scope1;
       const s2 = input.scope2;
       const prec = input.precursors;
-const payload = normalizePayloadForSubmit({
+      const cp = input.carbon_price;
+
+      const identity: any = {
+        operator_legal_name: id.operator_legal_name.trim(),
+        installation_name: id.installation_name.trim(),
+        installation_address: {
+          street: id.installation_address.street.trim(),
+          city: id.installation_address.city.trim(),
+          postal: id.installation_address.postal.trim(),
+          country: id.installation_address.country.trim(),
+        },
+        nace_code: id.nace_code.trim(),
+      };
+
+      const unlocode = id.unlocode.trim();
+      const lat = ((id as any)?.coordinates?.lat ?? (id as any)?.lat ?? "").toString().trim();
+      const lng = ((id as any)?.coordinates?.lng ?? (id as any)?.lng ?? "").toString().trim();
+
+      if (unlocode) identity.unlocode = unlocode;
+      else identity.coordinates = { lat, lng };
+
+      const payload = {
         identity,
         goods: {
           cn_code: goods.cn_code.trim(),
@@ -922,24 +919,6 @@ const payload = normalizePayloadForSubmit({
           (Boolean(cp.scheme_name.trim()) ||
             Boolean(cp.amount_paid.trim()) ||
             Boolean(cp.currency.trim()) ||
-            Boolean(cp.quantity_covered_tco2e.trim()) ||
-            Boolean(cp.rebate_amount.trim()) ||
-            Boolean(cp.rebate_or_free_allocation))
-            ? {
-                scheme_name: cp.scheme_name.trim(),
-                amount_paid: cp.amount_paid.trim(),
-                currency: cp.currency.trim(),
-                quantity_covered_tco2e: cp.quantity_covered_tco2e.trim(),
-                rebate_or_free_allocation: cp.rebate_or_free_allocation,
-                ...(cp.rebate_or_free_allocation ? { rebate_amount: cp.rebate_amount.trim() } : {}),
-              }
-            : {},
-
-        derived: {},
-        evidence_files: evidenceFiles,
-        notes: input.notes,
-        client_submitted_at: new Date().toISOString(),
-      })|
             Boolean(cp.quantity_covered_tco2e.trim()) ||
             Boolean(cp.rebate_amount.trim()) ||
             Boolean(cp.rebate_or_free_allocation))
@@ -1123,14 +1102,14 @@ const payload = normalizePayloadForSubmit({
           {!input.identity.unlocode.trim() && (
             <div className="gsx-row">
               <label className="gsx-field">
-                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={false} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
+                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={true} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lat} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lat) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lat")} />
               </label>
 
               <label className="gsx-field">
-                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={false} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
+                <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={true} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lng} onKeyDown={decimalKeyDown}
                   onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lng) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lng")} />
