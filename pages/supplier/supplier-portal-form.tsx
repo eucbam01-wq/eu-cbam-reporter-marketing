@@ -185,6 +185,12 @@ function parseValidateReturn(raw: any): {
 
   if (typeof raw === "string") {
     const s = raw.trim();
+
+    // validate_supplier_token may return a UUID string directly.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+      request_id = s;
+      return { request_id, cn_code, expires_at, status };
+    }
     const m = s.match(/^\((.*)\)$/);
     const inner = m ? m[1] : s;
 
@@ -676,6 +682,9 @@ export default function SupplierPortalForm({
             const metaFromContext = extractSupplierMeta(payload);
 
             if (!ignore) {
+              const exp = (payload as any)?.expires_at ?? (payload as any)?.expiresAt ?? null;
+              if (typeof exp === "string" && exp.trim()) setExpiresAt(exp.trim());
+
               if (metaFromContext.supplierName) setSupplierName(metaFromContext.supplierName);
               if (metaFromContext.companyName) setCompanyName(metaFromContext.companyName);
               if (metaFromContext.locale) setSupplierLocale(metaFromContext.locale);
