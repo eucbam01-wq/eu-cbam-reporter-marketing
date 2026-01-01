@@ -11,9 +11,20 @@ export default function App({ Component, pageProps }: AppProps) {
   // Route pattern in Next pages router is "/supplier/[token]".
   const isSupplierPortal = router.pathname === "/supplier/[token]" || router.asPath.startsWith("/supplier/");
 
+  // Importer console must be isolated: no marketing navbar/footer/layout.
+  const isImporterConsole =
+    router.pathname === "/app" ||
+    router.pathname.startsWith("/importer/") ||
+    router.asPath === "/app" ||
+    router.asPath.startsWith("/app/") ||
+    router.asPath.startsWith("/app?") ||
+    router.asPath.startsWith("/app#") ||
+    router.asPath.startsWith("/importer/");
+
   const getLayout =
     (Component as any).getLayout ||
-    ((page: React.ReactNode) => (isSupplierPortal ? <>{page}</> : <PublicLayout>{page}</PublicLayout>));
+    ((page: React.ReactNode) =>
+      isSupplierPortal || isImporterConsole ? <>{page}</> : <PublicLayout>{page}</PublicLayout>);
 
   return getLayout(<Component {...pageProps} />);
 }
