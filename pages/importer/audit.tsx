@@ -1,6 +1,7 @@
-// FILE: marketing/pages/importer/audit.tsx
+// FILE: marketing/pages/importer/audit.tsx (repo: eu-cbam-reporter/marketing)
 import Head from "next/head";
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabase() {
@@ -16,6 +17,7 @@ type AuditRow = {
   submitted_at: string;
   scope2_source_type: string | null;
   evidence_file_count: number;
+  evidence_files: any | null;
 };
 
 export default function ImporterAuditPage() {
@@ -35,20 +37,21 @@ export default function ImporterAuditPage() {
           return;
         }
 
-        const { data, error: err } = await supabase
-          .from("supplier_portal_submissions")
-          .select("id, supplier_request_id, submitted_at, scope2_source_type, evidence_file_count")
-          .order("submitted_at", { ascending: false });
+        const { data, error: err } = await supabase.rpc("list_supplier_submissions_for_importer", {
+          p_supplier_request_id: null,
+        });
 
         if (err) throw err;
+
         if (!cancelled) {
           setRows(
             (data || []).map((r: any) => ({
-              submission_id: r.id,
+              submission_id: r.submission_id,
               supplier_request_id: r.supplier_request_id,
               submitted_at: r.submitted_at,
-              scope2_source_type: r.scope2_source_type,
-              evidence_file_count: r.evidence_file_count ?? 0,
+              scope2_source_type: r.scope2_source_type ?? null,
+              evidence_file_count: Number(r.evidence_file_count ?? 0),
+              evidence_files: r.evidence_files ?? null,
             }))
           );
           setLoading(false);
@@ -83,6 +86,7 @@ export default function ImporterAuditPage() {
           color:#202020;
         }
         .gsx-shell{ width:min(1100px,100%); margin:0 auto; }
+        .gsx-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
         .gsx-title{ font-size:20px; font-weight:900; margin:0 0 12px; }
         .gsx-card{
           border-radius:16px;
@@ -96,12 +100,17 @@ export default function ImporterAuditPage() {
           border-bottom:1px solid #E5E7EB;
           text-align:left;
           vertical-align:top;
+          word-break:break-word;
         }
         .gsx-muted{ color:#6B7280; }
+        .gsx-link{ color:#111827; text-decoration:underline; }
       `}</style>
 
       <main className="gsx-shell">
-        <h1 className="gsx-title">Submission audit</h1>
+        <div className="gsx-top">
+          <h1 className="gsx-title">Submission audit</h1>
+          <Link className="gsx-link" href="/app">Back</Link>
+        </div>
 
         <section className="gsx-card">
           {loading ? <div className="gsx-muted">Loading...</div> : null}
@@ -136,4 +145,4 @@ export default function ImporterAuditPage() {
     </div>
   );
 }
-// FILE: marketing/pages/importer/audit.tsx
+// FILE: marketing/pages/importer/audit.tsx (repo: eu-cbam-reporter/marketing)
