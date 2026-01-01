@@ -840,7 +840,7 @@ export default function SupplierPortalForm({
 
     setEvidenceFiles((cur) => [...cur.filter((x) => x.purpose !== "scope2_actual_evidence"), ref]);
 
-    return null;
+    return ref;
 
   }
 
