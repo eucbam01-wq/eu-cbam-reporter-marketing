@@ -185,6 +185,14 @@ function parseValidateReturn(raw: any): {
 
   if (typeof raw === "string") {
     const s = raw.trim();
+    const uuidRe =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (uuidRe.test(s)) {
+      request_id = s;
+      status = "valid";
+      return { request_id, cn_code, expires_at, status };
+    }
+
     const m = s.match(/^\((.*)\)$/);
     const inner = m ? m[1] : s;
 
@@ -639,16 +647,19 @@ export default function SupplierPortalForm({
         const raw = asSingleRow<any>(vData);
         const parsed = parseValidateReturn(raw);
 
-        const status = ((raw as any)?.status ?? parsed.status ?? null) as any;
-        const ok = status ? status === "valid" : (raw as any)?.ok === true || (parsed.request_id !== null && parsed.request_id !== "");
+        const requestIdFromValidate =
+          parsed.request_id ||
+          (typeof raw === "string" ? raw.trim() : null) ||
+          (raw as any)?.request_id ||
+          (raw as any)?.supplier_request_id ||
+          null;
 
-        // Legacy ok-gate removed.
-
-          return;
+        if (!requestIdFromValidate) {
+          throw new Error(parsed.error || "Invalid or expired supplier link.");
         }
 
         if (!ignore) {
-          setRequestId(parsed.request_id);
+          setRequestId(requestIdFromValidate);
           setCnCode(parsed.cn_code);
           setExpiresAt(parsed.expires_at);
           setInput((cur) => ({
@@ -676,6 +687,23 @@ export default function SupplierPortalForm({
               if (metaFromContext.companyName) setCompanyName(metaFromContext.companyName);
               if (metaFromContext.locale) setSupplierLocale(metaFromContext.locale);
               if (onMetaLoadedRef.current) onMetaLoadedRef.current(metaFromContext);
+
+            const ctxExpiresAt = (payload as any)?.expires_at;
+            if (typeof ctxExpiresAt === "string" && ctxExpiresAt.trim()) {
+              setExpiresAt(ctxExpiresAt);
+            }
+
+            const ctxRequestId =
+              (payload as any)?.supplier_request_id || (payload as any)?.request_id || (payload as any)?.supplierRequestId;
+            if (typeof ctxRequestId === "string" && ctxRequestId.trim()) {
+              setRequestId(ctxRequestId);
+            }
+
+            const ctxCn = (payload as any)?.cn_code;
+            if (typeof ctxCn === "string" && ctxCn.trim()) {
+              setCnCode(ctxCn);
+              setInput((cur) => ({ ...cur, goods: { ...cur.goods, cn_code: ctxCn.trim() } }));
+            }
             }
           }
         } catch {
