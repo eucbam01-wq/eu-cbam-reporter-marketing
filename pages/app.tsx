@@ -807,6 +807,9 @@ export default function AppPage() {
             <a className="gsx-navItem" href="/importer/supplier-links">
               <span>Suppliers</span>
             </a>
+            <a className="gsx-navItem" href="/importer/entities">
+              <span>Entities</span>
+            </a>
             <a className="gsx-navItem" href="/app#settings">
               <span>Settings</span>
             </a>
