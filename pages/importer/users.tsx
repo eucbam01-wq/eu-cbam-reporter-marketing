@@ -115,16 +115,34 @@ export default function ImporterUsersPage() {
       const email = inviteEmail.trim().toLowerCase();
       if (!email || !email.includes("@")) throw new Error("Valid email required.");
 
-      const { data, error } = await supabase.functions.invoke("invite-org-member", {
-        body: {
+      const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
+      if (sessErr) throw sessErr;
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("Missing session token.");
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+      if (!supabaseUrl || !anonKey) throw new Error("Missing Supabase public env.");
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/invite-org-member`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           org_id: activeOrgId,
           email,
           role: inviteRole,
-        },
+        }),
       });
 
-      if (error) throw error;
-      if (!data?.ok) throw new Error("Invite failed.");
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = payload?.detail || payload?.error || payload?.message || `Invite failed (${res.status})`;
+        throw new Error(String(msg));
+      }
 
       setInviteEmail("");
       await loadMembers(activeOrgId);
