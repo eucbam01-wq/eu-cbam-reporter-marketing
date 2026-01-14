@@ -376,6 +376,103 @@ function finalizeDecimalInput(v: string): string {
   return s;
 }
 
+
+function hasForbiddenSignedNumberChars(v: string): boolean {
+  return /[^0-9.,\s-]/.test(v || "");
+}
+
+function sanitizeSignedDecimalInput(next: string, prev: string): string {
+  if (hasForbiddenSignedNumberChars(next)) return prev;
+
+  // Accept both "." and "," as decimal separator. Strip all other chars, allow one leading "-".
+  const raw = (next ?? "").replace(/,/g, ".");
+  let out = "";
+  let dot = false;
+  let sign = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+
+    if (ch === "-" && !sign && out.length === 0) {
+      out = "-";
+      sign = true;
+      continue;
+    }
+
+    if (ch >= "0" && ch <= "9") {
+      out += ch;
+      continue;
+    }
+
+    if (ch === "." && !dot) {
+      out += ".";
+      dot = true;
+      continue;
+    }
+  }
+
+  if (out === "-") return out;
+  if (out.startsWith("-.")) out = `-0${out.slice(1)}`;
+  if (out.startsWith(".")) out = `0${out}`;
+  return out;
+}
+
+function finalizeSignedDecimalInput(v: string): string {
+  let s = (v ?? "").trim();
+  if (!s || s === "-") return "";
+  if (s.endsWith(".")) s = s.slice(0, -1);
+  if (s === "-0") s = "0";
+  return s;
+}
+
+const DECIMALS_TONNES = 3;
+const DECIMALS_TCO2E = 3;
+const DECIMALS_MWH = 3;
+const DECIMALS_FACTOR = 6;
+const DECIMALS_MONEY = 2;
+
+function roundToDecimals(n: number, decimals: number): number {
+  const p = Math.pow(10, decimals);
+  return Math.round((n + Number.EPSILON) * p) / p;
+}
+
+function formatRounded(n: number, decimals: number): string {
+  const rounded = roundToDecimals(n, decimals);
+  let s = rounded.toFixed(decimals);
+  s = s.replace(/\.?0+$/, "");
+  if (s === "-0") s = "0";
+  return s;
+}
+
+function normalizeDecimalString(v: string, decimals: number): string {
+  const s = finalizeDecimalInput(v);
+  if (!s) return "";
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return "";
+  return formatRounded(n, decimals);
+}
+
+function normalizeOnBlur(current: string, decimals: number): string {
+  return normalizeDecimalString(current, decimals);
+}
+
+
+function normalizeSignedDecimalString(raw: string, decimals: number): string {
+  const cleaned = sanitizeSignedDecimalInput(raw, "");
+  const s = finalizeSignedDecimalInput(cleaned);
+  if (!s) return "";
+
+  const n = Number(s);
+  if (!Number.isFinite(n)) return "";
+
+  return formatRounded(n, decimals);
+}
+
+function normalizeSignedOnBlur(current: string, decimals: number): string {
+  return normalizeSignedDecimalString(current, decimals);
+}
+
+
 function decimalKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
   const k = e.key;
 
@@ -393,9 +490,16 @@ function decimalKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     return;
   }
 
-  if (k.length === 1 && /[0-9.,\-]/.test(k)) return;
+  if (k.length === 1 && /[0-9.,]/.test(k)) return;
 
   e.preventDefault();
+}
+
+
+function signedDecimalKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.key === "Enter") return;
+  // Allow: digits, "," / ".", and "-" for signed decimals (lat/lng).
+  if (!/[0-9.,-]/.test(e.key)) e.preventDefault();
 }
 
 function FieldError({ msg }: { msg: string | null }) {
@@ -891,8 +995,8 @@ export default function SupplierPortalForm({
       };
 
       const unlocode = id.unlocode.trim();
-      const lat = ((id as any)?.coordinates?.lat ?? (id as any)?.lat ?? "").toString().trim();
-      const lng = ((id as any)?.coordinates?.lng ?? (id as any)?.lng ?? "").toString().trim();
+      const lat = normalizeSignedDecimalString(((id as any)?.coordinates?.lat ?? (id as any)?.lat ?? "").toString(), 6);
+      const lng = normalizeSignedDecimalString(((id as any)?.coordinates?.lng ?? (id as any)?.lng ?? "").toString(), 6);
 
       if (unlocode) identity.unlocode = unlocode;
       else identity.coordinates = { lat, lng };
@@ -903,24 +1007,24 @@ export default function SupplierPortalForm({
           cn_code: goods.cn_code.trim(),
           trade_name: goods.trade_name.trim(),
           production_route: goods.production_route.trim(),
-          quantity_tonnes: goods.quantity_tonnes.trim(),
+          quantity_tonnes: normalizeDecimalString(goods.quantity_tonnes, DECIMALS_TONNES),
         },
         scope1: {
-          total_tco2e: s1.total_tco2e.trim(),
+          total_tco2e: normalizeDecimalString(s1.total_tco2e, DECIMALS_TCO2E),
           source_streams: s1.source_streams || [],
         },
         scope2: {
-          electricity_mwh: s2.electricity_mwh.trim(),
+          electricity_mwh: normalizeDecimalString(s2.electricity_mwh, DECIMALS_MWH),
           source_type: s2.source_type,
-          ...(s2.source_type === "actual" ? { emission_factor_tco2e_per_mwh: s2.emission_factor_tco2e_per_mwh.trim() } : {}),
+          ...(s2.source_type === "actual" ? { emission_factor_tco2e_per_mwh: normalizeDecimalString(s2.emission_factor_tco2e_per_mwh, DECIMALS_FACTOR) } : {}),
         },
         precursors: {
           used: prec.used,
           items: prec.used
             ? (prec.items || []).map((r) => ({
                 cn_code: r.cn_code.trim(),
-                quantity_tonnes: r.quantity_tonnes.trim(),
-                embedded_emissions_tco2e_per_tonne: r.embedded_emissions_tco2e_per_tonne.trim(),
+                quantity_tonnes: normalizeDecimalString(r.quantity_tonnes, DECIMALS_TONNES),
+                embedded_emissions_tco2e_per_tonne: normalizeDecimalString(r.embedded_emissions_tco2e_per_tonne, DECIMALS_TCO2E),
               }))
             : [],
         },
@@ -933,11 +1037,11 @@ export default function SupplierPortalForm({
             Boolean(cp.rebate_or_free_allocation))
             ? {
                 scheme_name: cp.scheme_name.trim(),
-                amount_paid: cp.amount_paid.trim(),
+                amount_paid: normalizeDecimalString(cp.amount_paid, DECIMALS_MONEY),
                 currency: cp.currency.trim(),
-                quantity_covered_tco2e: cp.quantity_covered_tco2e.trim(),
+                quantity_covered_tco2e: normalizeDecimalString(cp.quantity_covered_tco2e, DECIMALS_TCO2E),
                 rebate_or_free_allocation: cp.rebate_or_free_allocation,
-                ...(cp.rebate_or_free_allocation ? { rebate_amount: cp.rebate_amount.trim() } : {}),
+                ...(cp.rebate_or_free_allocation ? { rebate_amount: normalizeDecimalString(cp.rebate_amount, DECIMALS_MONEY) } : {}),
               }
             : {},
 
@@ -1112,15 +1216,15 @@ export default function SupplierPortalForm({
             <div className="gsx-row">
               <label className="gsx-field">
                 <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lat.label" required={true} meaningKey="form.identity.coordinates.lat.help.meaning" exampleKey="form.identity.coordinates.lat.help.example" />
-                <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lat} onKeyDown={decimalKeyDown}
-                  onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lat) } } }))} />
+                <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lat} onKeyDown={signedDecimalKeyDown}
+                  onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: sanitizeSignedDecimalInput(e.target.value, cur.identity.coordinates.lat) } } }))} onBlur={() => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lat: normalizeSignedOnBlur(cur.identity.coordinates.lat, 6) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lat")} />
               </label>
 
               <label className="gsx-field">
                 <FieldLabelWithInfo t={t} labelKey="form.identity.coordinates.lng.label" required={true} meaningKey="form.identity.coordinates.lng.help.meaning" exampleKey="form.identity.coordinates.lng.help.example" />
-                <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lng} onKeyDown={decimalKeyDown}
-                  onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: sanitizeDecimalInput(e.target.value, cur.identity.coordinates.lng) } } }))} />
+                <input className="gsx-input" inputMode="decimal" placeholder="0.000000" value={input.identity.coordinates.lng} onKeyDown={signedDecimalKeyDown}
+                  onChange={(e) => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: sanitizeSignedDecimalInput(e.target.value, cur.identity.coordinates.lng) } } }))} onBlur={() => setInput((cur) => ({ ...cur, identity: { ...cur.identity, coordinates: { ...cur.identity.coordinates, lng: normalizeSignedOnBlur(cur.identity.coordinates.lng, 6) } } }))} />
                 <FieldError msg={showErr("identity.coordinates.lng")} />
               </label>
             </div>
@@ -1164,7 +1268,7 @@ export default function SupplierPortalForm({
             <label className="gsx-field">
               <FieldLabelWithInfo t={t} labelKey="form.goods.quantity_tonnes.label" required={true} meaningKey="form.goods.quantity_tonnes.help.meaning" exampleKey="form.goods.quantity_tonnes.help.example" />
               <input className="gsx-input" inputMode="decimal" placeholder="0.000" value={input.goods.quantity_tonnes} onKeyDown={decimalKeyDown}
-                onChange={(e) => setInput((cur) => ({ ...cur, goods: { ...cur.goods, quantity_tonnes: sanitizeDecimalInput(e.target.value, cur.goods.quantity_tonnes) } }))} onBlur={() => setInput((cur) => ({ ...cur, goods: { ...cur.goods, quantity_tonnes: finalizeDecimalInput(cur.goods.quantity_tonnes) } }))} />
+                onChange={(e) => setInput((cur) => ({ ...cur, goods: { ...cur.goods, quantity_tonnes: sanitizeDecimalInput(e.target.value, cur.goods.quantity_tonnes) } }))} onBlur={() => setInput((cur) => ({ ...cur, goods: { ...cur.goods, quantity_tonnes: normalizeOnBlur(cur.goods.quantity_tonnes, DECIMALS_TONNES) } }))} />
               <FieldError msg={showErr("goods.quantity_tonnes")} />
             </label>
           </div>
@@ -1182,7 +1286,7 @@ export default function SupplierPortalForm({
             <label className="gsx-field">
               <FieldLabelWithInfo t={t} labelKey="form.scope1.total_tco2e.label" required={true} meaningKey="form.scope1.total_tco2e.help.meaning" exampleKey="form.scope1.total_tco2e.help.example" />
               <input className="gsx-input" inputMode="decimal" placeholder="0.000" value={input.scope1.total_tco2e} onKeyDown={decimalKeyDown}
-                onChange={(e) => setInput((cur) => ({ ...cur, scope1: { ...cur.scope1, total_tco2e: sanitizeDecimalInput(e.target.value, cur.scope1.total_tco2e) } }))} onBlur={() => setInput((cur) => ({ ...cur, scope1: { ...cur.scope1, total_tco2e: finalizeDecimalInput(cur.scope1.total_tco2e) } }))} />
+                onChange={(e) => setInput((cur) => ({ ...cur, scope1: { ...cur.scope1, total_tco2e: sanitizeDecimalInput(e.target.value, cur.scope1.total_tco2e) } }))} onBlur={() => setInput((cur) => ({ ...cur, scope1: { ...cur.scope1, total_tco2e: normalizeOnBlur(cur.scope1.total_tco2e, DECIMALS_TCO2E) } }))} />
               <FieldError msg={showErr("scope1.total_tco2e")} />
             </label>
 
@@ -1216,7 +1320,7 @@ export default function SupplierPortalForm({
             <label className="gsx-field">
               <FieldLabelWithInfo t={t} labelKey="form.scope2.electricity_mwh.label" required={true} meaningKey="form.scope2.electricity_mwh.help.meaning" exampleKey="form.scope2.electricity_mwh.help.example" />
               <input className="gsx-input" inputMode="decimal" placeholder="0.000" value={input.scope2.electricity_mwh} onKeyDown={decimalKeyDown}
-                onChange={(e) => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, electricity_mwh: sanitizeDecimalInput(e.target.value, cur.scope2.electricity_mwh) } }))} onBlur={() => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, electricity_mwh: finalizeDecimalInput(cur.scope2.electricity_mwh) } }))} />
+                onChange={(e) => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, electricity_mwh: sanitizeDecimalInput(e.target.value, cur.scope2.electricity_mwh) } }))} onBlur={() => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, electricity_mwh: normalizeOnBlur(cur.scope2.electricity_mwh, DECIMALS_MWH) } }))} />
               <FieldError msg={showErr("scope2.electricity_mwh")} />
             </label>
 
@@ -1234,7 +1338,7 @@ export default function SupplierPortalForm({
               <label className="gsx-field">
                 <FieldLabelWithInfo t={t} labelKey="form.scope2.emission_factor.label" required={true} meaningKey="form.scope2.emission_factor.help.meaning" exampleKey="form.scope2.emission_factor.help.example" />
                 <input className="gsx-input" inputMode="decimal" placeholder="0.000" value={input.scope2.emission_factor_tco2e_per_mwh} onKeyDown={decimalKeyDown}
-                  onChange={(e) => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, emission_factor_tco2e_per_mwh: sanitizeDecimalInput(e.target.value, cur.scope2.emission_factor_tco2e_per_mwh) } }))} onBlur={() => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, emission_factor_tco2e_per_mwh: finalizeDecimalInput(cur.scope2.emission_factor_tco2e_per_mwh) } }))} />
+                  onChange={(e) => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, emission_factor_tco2e_per_mwh: sanitizeDecimalInput(e.target.value, cur.scope2.emission_factor_tco2e_per_mwh) } }))} onBlur={() => setInput((cur) => ({ ...cur, scope2: { ...cur.scope2, emission_factor_tco2e_per_mwh: normalizeOnBlur(cur.scope2.emission_factor_tco2e_per_mwh, DECIMALS_FACTOR) } }))} />
                 <FieldError msg={showErr("scope2.emission_factor_tco2e_per_mwh")} />
               </label>
 
@@ -1333,7 +1437,7 @@ export default function SupplierPortalForm({
                         onBlur={() =>
                           setInput((cur) => {
                             const items = [...cur.precursors.items];
-                            items[idx] = { ...items[idx], quantity_tonnes: finalizeDecimalInput(items[idx].quantity_tonnes) };
+                            items[idx] = { ...items[idx], quantity_tonnes: normalizeOnBlur(items[idx].quantity_tonnes, DECIMALS_TONNES) };
                             return { ...cur, precursors: { ...cur.precursors, items } };
                           })
                         }
@@ -1375,7 +1479,7 @@ export default function SupplierPortalForm({
                             const items = [...cur.precursors.items];
                             items[idx] = {
                               ...items[idx],
-                              embedded_emissions_tco2e_per_tonne: finalizeDecimalInput(items[idx].embedded_emissions_tco2e_per_tonne),
+                              embedded_emissions_tco2e_per_tonne: normalizeOnBlur(items[idx].embedded_emissions_tco2e_per_tonne, DECIMALS_TCO2E),
                             };
                             return { ...cur, precursors: { ...cur.precursors, items } };
                           })
@@ -1466,7 +1570,7 @@ export default function SupplierPortalForm({
                 onChange={(e) =>
                   setInput((cur) => ({ ...cur, carbon_price: { ...cur.carbon_price, amount_paid: sanitizeDecimalInput(e.target.value, cur.carbon_price.amount_paid) } }))
                 }
-                onBlur={() => setInput((cur) => ({ ...cur, carbon_price: { ...cur.carbon_price, amount_paid: finalizeDecimalInput(cur.carbon_price.amount_paid) } }))}
+                onBlur={() => setInput((cur) => ({ ...cur, carbon_price: { ...cur.carbon_price, amount_paid: normalizeOnBlur(cur.carbon_price.amount_paid, DECIMALS_MONEY) } }))}
               />
               <FieldError msg={showErr("carbon_price.amount_paid")} />
             </label>
@@ -1512,7 +1616,7 @@ export default function SupplierPortalForm({
                 onBlur={() =>
                   setInput((cur) => ({
                     ...cur,
-                    carbon_price: { ...cur.carbon_price, quantity_covered_tco2e: finalizeDecimalInput(cur.carbon_price.quantity_covered_tco2e) },
+                    carbon_price: { ...cur.carbon_price, quantity_covered_tco2e: normalizeOnBlur(cur.carbon_price.quantity_covered_tco2e, DECIMALS_TCO2E) },
                   }))
                 }
               />
@@ -1575,7 +1679,7 @@ export default function SupplierPortalForm({
                     }))
                   }
                   onBlur={() =>
-                    setInput((cur) => ({ ...cur, carbon_price: { ...cur.carbon_price, rebate_amount: finalizeDecimalInput(cur.carbon_price.rebate_amount) } }))
+                    setInput((cur) => ({ ...cur, carbon_price: { ...cur.carbon_price, rebate_amount: normalizeOnBlur(cur.carbon_price.rebate_amount, DECIMALS_MONEY) } }))
                   }
                 />
                 <FieldError msg={showErr("carbon_price.rebate_amount")} />
