@@ -1,4 +1,4 @@
-// FILE: marketing/pages/importer/supplier-links.tsx
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx
 import Head from "next/head";
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -41,7 +41,6 @@ type TokenIssueResult = {
   full_url: string;
   supplier_request_id: string;
   token_hash: string;
-  expires_at: string;
   token_expires_at: string;
 };
 
@@ -63,6 +62,11 @@ function clip(v: string | null | undefined, n: number) {
   if (!s) return "-";
   if (s.length <= n) return s;
   return s.slice(0, n - 1) + "…";
+}
+
+function isIssuableStatus(status: string | null | undefined) {
+  const s = (status || "").toLowerCase();
+  return s === "draft" || s === "sent";
 }
 
 export default function ImporterSupplierLinksPage() {
@@ -333,7 +337,7 @@ export default function ImporterSupplierLinksPage() {
         <div className="gsx-head">
           <div>
             <h1 className="gsx-title">Supplier links</h1>
-            <p className="gsx-sub">Read-only list of supplier requests. Generate a token only via RPC.</p>
+            <p className="gsx-sub">Read-only list of supplier requests. Issue a link only when status is draft or sent.</p>
           </div>
           <div className="gsx-actions">
             <a className="gsx-btn" href="/app">
@@ -389,6 +393,18 @@ export default function ImporterSupplierLinksPage() {
                         ? it.used_count >= it.max_uses
                         : false;
 
+                    const statusText = (it.status || "unknown").toLowerCase();
+                    const bad =
+                      revoked ||
+                      usedOut ||
+                      statusText === "submitted" ||
+                      statusText === "verified" ||
+                      statusText === "rejected" ||
+                      statusText === "revoked" ||
+                      statusText === "expired";
+
+                    const canIssue = isIssuableStatus(statusText);
+
                     return (
                       <tr key={it.supplier_request_id}>
                         <td>
@@ -404,7 +420,7 @@ export default function ImporterSupplierLinksPage() {
                         <td>{it.country_of_origin || "-"}</td>
                         <td>{it.procedure_code || "-"}</td>
                         <td>
-                          <span className={"gsx-badge " + (revoked || usedOut ? "gsx-pillBad" : "gsx-pillGood")}>
+                          <span className={"gsx-badge " + (bad ? "gsx-pillBad" : "gsx-pillGood")}>
                             {it.status || "unknown"}
                           </span>
                         </td>
@@ -416,8 +432,8 @@ export default function ImporterSupplierLinksPage() {
                           <button
                             className="gsx-btn"
                             onClick={() => issueTokenForRequest(it.supplier_request_id)}
-                            disabled={issuingId === it.supplier_request_id}
-                            title="Issues a token for this existing request via RPC (service-role constraints apply)."
+                            disabled={!canIssue || issuingId === it.supplier_request_id}
+                            title={canIssue ? "Issues a token for this request via RPC." : "Allowed only when status is draft or sent."}
                           >
                             {issuingId === it.supplier_request_id ? "Generating…" : "Generate link"}
                           </button>
@@ -467,7 +483,6 @@ export default function ImporterSupplierLinksPage() {
 
               <div className="gsx-spacer" />
 
-              <div className="gsx-muted">Expires: {fmtDate(issued.expires_at)}</div>
               <div className="gsx-muted">Token expires: {fmtDate(issued.token_expires_at)}</div>
             </div>
           </div>
@@ -476,4 +491,4 @@ export default function ImporterSupplierLinksPage() {
     </div>
   );
 }
-// FILE: marketing/pages/importer/supplier-links.tsx
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx
