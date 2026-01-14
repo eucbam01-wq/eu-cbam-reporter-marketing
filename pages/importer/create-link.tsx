@@ -1,4 +1,4 @@
-// FILE: marketing/pages/importer/create-link.tsx (repo: eu-cbam-reporter/marketing)
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx
 import Head from "next/head";
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
@@ -29,7 +29,6 @@ type CreateSupplierRequestWithTokenResult = {
   full_url: string;
   supplier_request_id: string;
   token_hash: string;
-  expires_at: string;
   token_expires_at: string;
 };
 
@@ -87,7 +86,6 @@ export default function CreateSupplierLinkPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session) throw new Error("Not signed in");
-
       if (!reportItemId) throw new Error("report_item_id is required");
       if (!supplierId) throw new Error("supplier_id is required");
 
@@ -95,10 +93,9 @@ export default function CreateSupplierLinkPage() {
         p_report_item_id: reportItemId,
         p_supplier_id: supplierId,
       });
-
       if (err) throw err;
 
-      const row = (Array.isArray(data) ? data?.[0] : data) as any;
+      const row = (Array.isArray(data) ? data[0] : data) as any;
       if (!row?.plaintext_token || !row?.full_url || !row?.supplier_request_id) {
         throw new Error("Unexpected RPC response");
       }
@@ -108,7 +105,6 @@ export default function CreateSupplierLinkPage() {
         full_url: row.full_url,
         supplier_request_id: row.supplier_request_id,
         token_hash: row.token_hash,
-        expires_at: row.expires_at,
         token_expires_at: row.token_expires_at,
       });
     } catch (ex: any) {
@@ -194,4 +190,4 @@ export default function CreateSupplierLinkPage() {
     </div>
   );
 }
-// FILE: marketing/pages/importer/create-link.tsx (repo: eu-cbam-reporter/marketing)
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx
