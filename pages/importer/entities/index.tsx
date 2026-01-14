@@ -384,7 +384,33 @@ export default function ImporterEntitiesIndexPage() {
                         </Link>{" "}
                         <Link className="btn" href={`/importer/entities/${le.id}/address`}>
                           Address
-                        </Link>
+                        </Link>{" "}
+                        {activeOrg?.default_legal_entity_id === le.id ? (
+                          <span className="muted">Default</span>
+                        ) : (
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={async () => {
+                              setErr(null);
+                              const { error } = await supabase.rpc("set_default_legal_entity_for_org", {
+                                p_org_id: activeOrgId,
+                                p_legal_entity_id: le.id,
+                              });
+                              if (error) {
+                                setErr(error.message);
+                              } else {
+                                setOrgs((prev) =>
+                                  prev.map((o) =>
+                                    o.id === activeOrgId ? { ...o, default_legal_entity_id: le.id } : o
+                                  )
+                                );
+                              }
+                            }}
+                          >
+                            Set default
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
