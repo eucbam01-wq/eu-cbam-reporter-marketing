@@ -14,17 +14,6 @@ function getSupabase() {
 type OrgRow = { id: string; name: string; type: string };
 type MembershipRow = { user_id: string; org_id: string; role: string; created_at?: string };
 
-function getFunctionsBaseUrl(supabaseUrl: string) {
-  // https://<ref>.supabase.co -> https://<ref>.functions.supabase.co
-  try {
-    const u = new URL(supabaseUrl);
-    const host = u.host; // <ref>.supabase.co
-    const ref = host.split(".")[0];
-    return `https://${ref}.functions.supabase.co`;
-  } catch {
-    return "";
-  }
-}
 
 export default function ImporterUsersPage() {
   const supabase = useMemo(() => getSupabase(), []);
@@ -126,33 +115,16 @@ export default function ImporterUsersPage() {
       const email = inviteEmail.trim().toLowerCase();
       if (!email || !email.includes("@")) throw new Error("Valid email required.");
 
-      const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
-      if (sessErr) throw sessErr;
-      const token = sessionData?.session?.access_token;
-      if (!token) throw new Error("Missing session token.");
-
-      const base = getFunctionsBaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || "");
-      if (!base) throw new Error("Cannot resolve functions base URL.");
-
-      const res = await fetch(`${base}/invite-org-member`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("invite-org-member", {
+        body: {
           org_id: activeOrgId,
           email,
           role: inviteRole,
-        }),
+        },
       });
 
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = payload?.detail || payload?.error || `Invite failed (${res.status})`;
-        throw new Error(String(msg));
-      }
+      if (error) throw error;
+      if (!data?.ok) throw new Error("Invite failed.");
 
       setInviteEmail("");
       await loadMembers(activeOrgId);
