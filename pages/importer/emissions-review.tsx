@@ -16,42 +16,53 @@ type ReportRow = {
   importer_org_id: string;
   quarter_year: string;
   status: string;
+  created_at?: string;
 };
 
-type ReportItemRow = {
+type ImportRow = {
   id: string;
-  report_id: string;
-  cn_code_id: string;
-  cn_code?: string | null;
-  goods_description?: string | null;
+  importer_org_id: string;
+  import_ref?: string | null;
+  import_date?: string | null; // YYYY-MM-DD
+};
+
+type ImportLineRow = {
+  id: string;
+  import_id: string;
+  importer_org_id: string;
+  product_sku: string;
+  cn_code: string;
   quantity?: number | null;
   net_mass_kg?: number | null;
+  customs_value_eur?: number | null;
   country_of_origin?: string | null;
   procedure_code?: string | null;
-  supplier_name: string;
-  supplier_reference?: string | null;
+  supplier_id?: string | null;
+  supplier_portal_submission_id: string;
 };
 
-type SupplierEmissionsRow = {
+type SupplierRow = {
   id: string;
-  report_item_id: string;
-  methodology?: string | null;
-  embedded_emissions_tco2e?: number | null;
-  direct_emissions_tco2e?: number | null;
-  indirect_emissions_tco2e?: number | null;
-  precursor_emissions_tco2e?: number | null;
-  electricity_mwh?: number | null;
-  updated_by_supplier: boolean;
-  updated_at: string;
+  importer_org_id: string;
+  name: string;
+};
+
+type SupplierPortalSubmissionRow = {
+  id: string;
+  supplier_request_id: string;
+  payload: any;
+  submitted_at: string;
 };
 
 type LineVM = {
-  reportItem: ReportItemRow;
-  report: ReportRow | null;
-  emissions: SupplierEmissionsRow | null;
-  flags: {
+  line: ImportLineRow;
+  import: ImportRow | null;
+  supplier: SupplierRow | null;
+  submission: SupplierPortalSubmissionRow | null;
+  derived: {
+    quarterYear: string;
+    embedded_tco2e: number | null;
     supplierActualVsDefault: "supplier_actual" | "default_fallback";
-    actualVsEstimated: "actual" | "estimated";
     lockedVsEditable: "locked" | "editable";
   };
 };
@@ -59,12 +70,10 @@ type LineVM = {
 type SupplierVM = {
   supplier_key: string;
   supplier_name: string;
-  supplier_reference?: string | null;
-  report_ids: string[];
-  line_count: number;
+  import_line_count: number;
   locked_count: number;
-  default_count: number;
-  actual_count: number;
+  supplier_actual_count: number;
+  default_fallback_count: number;
   total_embedded_tco2e: number;
 };
 
@@ -72,6 +81,58 @@ function fmtNum(n: number | null | undefined, dp = 3) {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return "-";
   const x = Number(n);
   return x.toLocaleString(undefined, { maximumFractionDigits: dp, minimumFractionDigits: 0 });
+}
+
+function toQuarterYear(dateStr?: string | null): string {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return "-";
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + 1;
+  const q = m <= 3 ? 1 : m <= 6 ? 2 : m <= 9 ? 3 : 4;
+  return `${y}Q${q}`;
+}
+
+function extractEmbeddedTco2e(payload: any): number | null {
+  if (!payload) return null;
+  const candidates = [
+    payload?.embedded_emissions_tco2e,
+    payload?.embedded_tco2e,
+    payload?.total_embedded_tco2e,
+    payload?.embedded_emissions,
+    payload?.emissions?.embedded_emissions_tco2e,
+    payload?.emissions?.embedded_tco2e,
+    payload?.emissions?.total_embedded_tco2e,
+    payload?.calculations?.embedded_emissions_tco2e,
+  ];
+  for (const v of candidates) {
+    const n = Number(v);
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function extractUpdatedBySupplier(payload: any): boolean | null {
+  if (!payload) return null;
+  const candidates = [
+    payload?.updated_by_supplier,
+    payload?.emissions?.updated_by_supplier,
+    payload?.meta?.updated_by_supplier,
+    payload?.submission?.updated_by_supplier,
+  ];
+  for (const v of candidates) {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      if (s == "true") return true
+      if (s == "false") return false
+    }
+    if (typeof v == "number") {
+      if (v == 1) return true
+      if (v == 0) return false
+    }
+  }
+  return null;
 }
 
 export default function EmissionsReviewPage() {
@@ -82,73 +143,80 @@ export default function EmissionsReviewPage() {
 
   const [view, setView] = useState<"suppliers" | "lines">("suppliers");
   const [search, setSearch] = useState("");
+  const [quarterFilter, setQuarterFilter] = useState<string>("");
 
-  const [reportsById, setReportsById] = useState<Record<string, ReportRow>>({});
-  const [lines, setLines] = useState<LineVM[]>([]);
+  const [vms, setVMs] = useState<LineVM[]>([]);
 
   const quarterOptions = useMemo(() => {
     const uniq = new Set<string>();
-    Object.values(reportsById).forEach((r) => {
-      if (r?.quarter_year) uniq.add(r.quarter_year);
+    vms.forEach((v) => {
+      if (v.derived.quarterYear && v.derived.quarterYear !== "-") uniq.add(v.derived.quarterYear);
     });
     return Array.from(uniq).sort();
-  }, [reportsById]);
+  }, [vms]);
 
-  const [quarterFilter, setQuarterFilter] = useState<string>("");
-
-  const filteredLines = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return lines
-      .filter((l) => {
+    return vms
+      .filter((x) => {
         if (!quarterFilter) return true;
-        return (l.report?.quarter_year || "") === quarterFilter;
+        return x.derived.quarterYear === quarterFilter;
       })
-      .filter((l) => {
+      .filter((x) => {
         if (!q) return true;
-        const ri = l.reportItem;
+        const sup = x.supplier?.name || "";
+        const sku = x.line.product_sku || "";
+        const cn = x.line.cn_code || "";
+        const origin = x.line.country_of_origin || "";
+        const ref = x.import?.import_ref || "";
+        const qy = x.derived.quarterYear || "";
         return (
-          (ri.supplier_name || "").toLowerCase().includes(q) ||
-          (ri.supplier_reference || "").toLowerCase().includes(q) ||
-          (ri.cn_code || "").toLowerCase().includes(q) ||
-          (ri.goods_description || "").toLowerCase().includes(q) ||
-          (l.report?.quarter_year || "").toLowerCase().includes(q)
+          sup.toLowerCase().includes(q) ||
+          sku.toLowerCase().includes(q) ||
+          cn.toLowerCase().includes(q) ||
+          origin.toLowerCase().includes(q) ||
+          ref.toLowerCase().includes(q) ||
+          qy.toLowerCase().includes(q)
         );
       });
-  }, [lines, search, quarterFilter]);
+  }, [vms, search, quarterFilter]);
 
   const suppliers = useMemo((): SupplierVM[] => {
     const map = new Map<string, SupplierVM>();
-
-    for (const l of filteredLines) {
-      const ri = l.reportItem;
-      const key = `${ri.supplier_name}::${ri.supplier_reference || ""}`;
+    for (const l of filtered) {
+      const key = l.supplier?.id || `unknown::${l.line.supplier_id || ""}`;
+      const name = l.supplier?.name || "-";
+      const embedded = Number(l.derived.embedded_tco2e || 0);
       const existing = map.get(key);
-      const embedded = Number(l.emissions?.embedded_emissions_tco2e || 0);
-
       if (!existing) {
         map.set(key, {
           supplier_key: key,
-          supplier_name: ri.supplier_name,
-          supplier_reference: ri.supplier_reference || null,
-          report_ids: l.report ? [l.report.id] : [],
-          line_count: 1,
-          locked_count: l.flags.lockedVsEditable === "locked" ? 1 : 0,
-          default_count: l.flags.supplierActualVsDefault === "default_fallback" ? 1 : 0,
-          actual_count: l.flags.supplierActualVsDefault === "supplier_actual" ? 1 : 0,
+          supplier_name: name,
+          import_line_count: 1,
+          locked_count: l.derived.lockedVsEditable === "locked" ? 1 : 0,
+          supplier_actual_count: l.derived.supplierActualVsDefault === "supplier_actual" ? 1 : 0,
+          default_fallback_count: l.derived.supplierActualVsDefault === "default_fallback" ? 1 : 0,
           total_embedded_tco2e: embedded,
         });
       } else {
-        existing.line_count += 1;
-        if (l.report && !existing.report_ids.includes(l.report.id)) existing.report_ids.push(l.report.id);
-        if (l.flags.lockedVsEditable === "locked") existing.locked_count += 1;
-        if (l.flags.supplierActualVsDefault === "default_fallback") existing.default_count += 1;
-        if (l.flags.supplierActualVsDefault === "supplier_actual") existing.actual_count += 1;
+        existing.import_line_count += 1;
+        if (l.derived.lockedVsEditable === "locked") existing.locked_count += 1;
+        if (l.derived.supplierActualVsDefault === "supplier_actual") existing.supplier_actual_count += 1;
+        if (l.derived.supplierActualVsDefault === "default_fallback") existing.default_fallback_count += 1;
         existing.total_embedded_tco2e += embedded;
       }
     }
-
     return Array.from(map.values()).sort((a, b) => b.total_embedded_tco2e - a.total_embedded_tco2e);
-  }, [filteredLines]);
+  }, [filtered]);
+
+  const kpis = useMemo(() => {
+    const total = filtered.length;
+    const locked = filtered.filter((l) => l.derived.lockedVsEditable === "locked").length;
+    const supplierActual = filtered.filter((l) => l.derived.supplierActualVsDefault === "supplier_actual").length;
+    const defaultFallback = filtered.filter((l) => l.derived.supplierActualVsDefault === "default_fallback").length;
+    const embedded = filtered.reduce((acc, l) => acc + Number(l.derived.embedded_tco2e || 0), 0);
+    return { total, locked, supplierActual, defaultFallback, embedded };
+  }, [filtered]);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,120 +232,123 @@ export default function EmissionsReviewPage() {
         setLoading(true);
         setError(null);
 
-        // IMPORTANT: Avoid relying on list_report_items_for_importer RPC.
-        // This screen is read-only and should load via table reads under RLS.
-
+        // Reports are used only to derive quarter lock state (non-draft report implies locked quarter).
         const { data: reports, error: rErr } = await supabase
           .from("reports")
-          .select("id, importer_org_id, quarter_year, status")
+          .select("id, importer_org_id, quarter_year, status, created_at")
           .order("created_at", { ascending: false });
-
         if (rErr) throw rErr;
 
-        const reportsMap: Record<string, ReportRow> = {};
+        const lockedQuarterByOrg = new Map<string, Set<string>>();
         (reports || []).forEach((r: any) => {
-          if (!r?.id) return;
-          reportsMap[r.id] = {
-            id: r.id,
-            importer_org_id: r.importer_org_id,
-            quarter_year: r.quarter_year,
-            status: r.status,
-          };
+          const org = String(r.importer_org_id || "");
+          const qy = String(r.quarter_year || "");
+          const status = String(r.status || "").toLowerCase();
+          if (!org || !qy) return;
+          if (status !== "draft") {
+            if (!lockedQuarterByOrg.has(org)) lockedQuarterByOrg.set(org, new Set());
+            lockedQuarterByOrg.get(org)!.add(qy);
+          }
         });
 
-        const reportIds = Object.keys(reportsMap);
+        const { data: imports, error: iErr } = await supabase.from("imports").select("id, importer_org_id, import_ref, import_date");
+        if (iErr) throw iErr;
 
-        if (!reportIds.length) {
-          if (!cancelled) {
-            setReportsById(reportsMap);
-            setLines([]);
-            setLoading(false);
-          }
-          return;
-        }
+        const importById = new Map<string, ImportRow>();
+        (imports || []).forEach((im: any) => {
+          if (!im?.id) return;
+          importById.set(im.id, {
+            id: im.id,
+            importer_org_id: im.importer_org_id,
+            import_ref: im.import_ref ?? null,
+            import_date: im.import_date ?? null,
+          });
+        });
 
-        const { data: reportItems, error: riErr } = await supabase
-          .from("report_items")
+        const { data: lines, error: lErr } = await supabase
+          .from("import_lines")
           .select(
-            "id, report_id, cn_code_id, cn_code, goods_description, quantity, net_mass_kg, country_of_origin, procedure_code, supplier_name, supplier_reference"
-          )
-          .in("report_id", reportIds);
+            "id, import_id, importer_org_id, product_sku, cn_code, quantity, net_mass_kg, customs_value_eur, country_of_origin, procedure_code, supplier_id, supplier_portal_submission_id"
+          );
+        if (lErr) throw lErr;
 
-        if (riErr) throw riErr;
+        const supplierIds = Array.from(new Set((lines || []).map((x: any) => x.supplier_id).filter(Boolean)));
+        const submissionIds = Array.from(new Set((lines || []).map((x: any) => x.supplier_portal_submission_id).filter(Boolean)));
 
-        const reportItemRows: ReportItemRow[] = (reportItems || []).map((r: any) => ({
-          id: r.id,
-          report_id: r.report_id,
-          cn_code_id: r.cn_code_id,
-          cn_code: r.cn_code ?? null,
-          goods_description: r.goods_description ?? null,
-          quantity: r.quantity ?? null,
-          net_mass_kg: r.net_mass_kg ?? null,
-          country_of_origin: r.country_of_origin ?? null,
-          procedure_code: r.procedure_code ?? null,
-          supplier_name: r.supplier_name,
-          supplier_reference: r.supplier_reference ?? null,
-        }));
-
-        const reportItemIds = reportItemRows.map((r) => r.id);
-        const emissionsMap: Record<string, SupplierEmissionsRow> = {};
-        if (reportItemIds.length) {
-          const { data: emissions, error: eErr } = await supabase
-            .from("supplier_emissions")
-            .select(
-              "id, report_item_id, methodology, embedded_emissions_tco2e, direct_emissions_tco2e, indirect_emissions_tco2e, precursor_emissions_tco2e, electricity_mwh, updated_by_supplier, updated_at"
-            )
-            .in("report_item_id", reportItemIds);
-
-          if (eErr) throw eErr;
-          (emissions || []).forEach((e: any) => {
-            emissionsMap[e.report_item_id] = {
-              id: e.id,
-              report_item_id: e.report_item_id,
-              methodology: e.methodology ?? null,
-              embedded_emissions_tco2e: e.embedded_emissions_tco2e ?? null,
-              direct_emissions_tco2e: e.direct_emissions_tco2e ?? null,
-              indirect_emissions_tco2e: e.indirect_emissions_tco2e ?? null,
-              precursor_emissions_tco2e: e.precursor_emissions_tco2e ?? null,
-              electricity_mwh: e.electricity_mwh ?? null,
-              updated_by_supplier: Boolean(e.updated_by_supplier),
-              updated_at: e.updated_at,
-            };
+        const suppliersMap = new Map<string, SupplierRow>();
+        if (supplierIds.length) {
+          const { data: suppliersData, error: sErr } = await supabase.from("suppliers").select("id, importer_org_id, name").in("id", supplierIds);
+          if (sErr) throw sErr;
+          (suppliersData || []).forEach((s: any) => {
+            suppliersMap.set(s.id, { id: s.id, importer_org_id: s.importer_org_id, name: s.name });
           });
         }
 
-        const lineVMs: LineVM[] = reportItemRows.map((ri) => {
-          const report = reportsMap[ri.report_id] || null;
-          const emissions = emissionsMap[ri.id] || null;
+        const submissionsMap = new Map<string, SupplierPortalSubmissionRow>();
+        if (submissionIds.length) {
+          const { data: subsData, error: subErr } = await supabase
+            .from("supplier_portal_submissions")
+            .select("id, supplier_request_id, payload, submitted_at")
+            .in("id", submissionIds);
+          if (subErr) throw subErr;
+          (subsData || []).forEach((s: any) => {
+            submissionsMap.set(s.id, {
+              id: s.id,
+              supplier_request_id: s.supplier_request_id,
+              payload: s.payload,
+              submitted_at: s.submitted_at,
+            });
+          });
+        }
 
-          const supplierActualVsDefault = emissions?.updated_by_supplier ? "supplier_actual" : "default_fallback";
-          const actualVsEstimated = emissions?.updated_by_supplier && (emissions?.methodology || "").trim() ? "actual" : "estimated";
+        const built: LineVM[] = (lines || []).map((l: any) => {
+          const imp = importById.get(l.import_id) || null;
+          const supplier = l.supplier_id ? suppliersMap.get(l.supplier_id) || null : null;
+          const submission = l.supplier_portal_submission_id ? submissionsMap.get(l.supplier_portal_submission_id) || null : null;
 
-          const lockedVsEditable = report && (report.status || "").toLowerCase() !== "draft" ? "locked" : "editable";
+          const quarterYear = toQuarterYear(imp?.import_date || null);
+
+          const embedded_tco2e = extractEmbeddedTco2e(submission?.payload);
+
+          const updatedBySupplier = extractUpdatedBySupplier(submission?.payload);
+          const supplierActualVsDefault = updatedBySupplier === false ? "default_fallback" : "supplier_actual";
+
+          const isLockedQuarter = Boolean(imp?.importer_org_id && quarterYear && lockedQuarterByOrg.get(String(imp.importer_org_id))?.has(quarterYear));
+          const lockedVsEditable = isLockedQuarter ? "locked" : "editable";
 
           return {
-            reportItem: ri,
-            report,
-            emissions,
-            flags: {
+            line: {
+              id: l.id,
+              import_id: l.import_id,
+              importer_org_id: l.importer_org_id,
+              product_sku: l.product_sku,
+              cn_code: l.cn_code,
+              quantity: l.quantity ?? null,
+              net_mass_kg: l.net_mass_kg ?? null,
+              customs_value_eur: l.customs_value_eur ?? null,
+              country_of_origin: l.country_of_origin ?? null,
+              procedure_code: l.procedure_code ?? null,
+              supplier_id: l.supplier_id ?? null,
+              supplier_portal_submission_id: l.supplier_portal_submission_id,
+            },
+            import: imp,
+            supplier,
+            submission,
+            derived: {
+              quarterYear,
+              embedded_tco2e,
               supplierActualVsDefault,
-              actualVsEstimated,
               lockedVsEditable,
             },
           };
         });
 
         if (!cancelled) {
-          setReportsById(reportsMap);
-          setLines(lineVMs);
+          setVMs(built);
           setLoading(false);
 
           if (!quarterFilter) {
-            const uniq = new Set<string>();
-            Object.values(reportsMap).forEach((r) => {
-              if (r?.quarter_year) uniq.add(r.quarter_year);
-            });
-            const opts = Array.from(uniq).sort();
+            const opts = Array.from(new Set(built.map((b) => b.derived.quarterYear).filter((x) => x && x !== "-"))).sort();
             if (opts.length) setQuarterFilter(opts[opts.length - 1]);
           }
         }
@@ -294,15 +365,6 @@ export default function EmissionsReviewPage() {
       cancelled = true;
     };
   }, [supabase]);
-
-  const kpis = useMemo(() => {
-    const total = filteredLines.length;
-    const locked = filteredLines.filter((l) => l.flags.lockedVsEditable === "locked").length;
-    const supplierActual = filteredLines.filter((l) => l.flags.supplierActualVsDefault === "supplier_actual").length;
-    const defaultFallback = filteredLines.filter((l) => l.flags.supplierActualVsDefault === "default_fallback").length;
-    const embedded = filteredLines.reduce((acc, l) => acc + Number(l.emissions?.embedded_emissions_tco2e || 0), 0);
-    return { total, locked, supplierActual, defaultFallback, embedded };
-  }, [filteredLines]);
 
   return (
     <div className="gsx-reviewRoot">
@@ -403,7 +465,6 @@ export default function EmissionsReviewPage() {
         .gsx-badgeEditable{ border-color:#D1D5DB; }
         .gsx-badgeActual{ border-color:#10B98133; }
         .gsx-badgeDefault{ border-color:#F59E0B33; }
-
         .gsx-small{ font-size:12px; }
       `}</style>
 
@@ -421,18 +482,10 @@ export default function EmissionsReviewPage() {
             <>
               <div className="gsx-row">
                 <div className="gsx-tabs">
-                  <button
-                    type="button"
-                    className={`gsx-tab ${view === "suppliers" ? "gsx-tabActive" : ""}`}
-                    onClick={() => setView("suppliers")}
-                  >
+                  <button type="button" className={`gsx-tab ${view === "suppliers" ? "gsx-tabActive" : ""}`} onClick={() => setView("suppliers")}>
                     Per supplier
                   </button>
-                  <button
-                    type="button"
-                    className={`gsx-tab ${view === "lines" ? "gsx-tabActive" : ""}`}
-                    onClick={() => setView("lines")}
-                  >
+                  <button type="button" className={`gsx-tab ${view === "lines" ? "gsx-tabActive" : ""}`} onClick={() => setView("lines")}>
                     Per import line
                   </button>
                 </div>
@@ -448,12 +501,7 @@ export default function EmissionsReviewPage() {
                   ))}
                 </select>
 
-                <input
-                  className="gsx-input"
-                  placeholder="Search supplier, CN code, goods, quarter"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <input className="gsx-input" placeholder="Search supplier, CN code, SKU, origin, import ref" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
 
               <div className="gsx-kpis">
@@ -495,13 +543,13 @@ export default function EmissionsReviewPage() {
                       <tr key={s.supplier_key}>
                         <td>
                           <div style={{ fontWeight: 900 }}>{s.supplier_name}</div>
-                          <div className="gsx-muted gsx-small">{s.supplier_reference || "-"}</div>
+                          <div className="gsx-muted gsx-small">{s.supplier_key.startsWith("unknown") ? "-" : s.supplier_key}</div>
                         </td>
-                        <td>{s.line_count.toLocaleString()}</td>
+                        <td>{s.import_line_count.toLocaleString()}</td>
                         <td>{s.locked_count.toLocaleString()}</td>
                         <td>
-                          <span className={`gsx-badge gsx-badgeActual`}>Actual: {s.actual_count}</span>{" "}
-                          <span className={`gsx-badge gsx-badgeDefault`}>Default: {s.default_count}</span>
+                          <span className="gsx-badge gsx-badgeActual">Actual: {s.supplier_actual_count}</span>{" "}
+                          <span className="gsx-badge gsx-badgeDefault">Default: {s.default_fallback_count}</span>
                         </td>
                         <td>{fmtNum(s.total_embedded_tco2e, 2)}</td>
                       </tr>
@@ -515,6 +563,7 @@ export default function EmissionsReviewPage() {
                       <th>Quarter</th>
                       <th>Supplier</th>
                       <th>CN code</th>
+                      <th>SKU</th>
                       <th>Qty</th>
                       <th>Net mass kg</th>
                       <th>Embedded tCO2e</th>
@@ -522,34 +571,25 @@ export default function EmissionsReviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLines.map((l) => {
-                      const ri = l.reportItem;
-                      const rep = l.report;
-                      const em = l.emissions;
-                      const lock = l.flags.lockedVsEditable;
-                      const src = l.flags.supplierActualVsDefault;
-                      const avs = l.flags.actualVsEstimated;
-
+                    {filtered.map((v) => {
+                      const lock = v.derived.lockedVsEditable;
+                      const src = v.derived.supplierActualVsDefault;
                       return (
-                        <tr key={ri.id}>
-                          <td>{rep?.quarter_year || "-"}</td>
+                        <tr key={v.line.id}>
+                          <td>{v.derived.quarterYear}</td>
                           <td>
-                            <div style={{ fontWeight: 900 }}>{ri.supplier_name}</div>
-                            <div className="gsx-muted gsx-small">{ri.supplier_reference || "-"}</div>
+                            <div style={{ fontWeight: 900 }}>{v.supplier?.name || "-"}</div>
+                            <div className="gsx-muted gsx-small">{v.import?.import_ref || "-"}</div>
                           </td>
-                          <td>{ri.cn_code || "-"}</td>
-                          <td>{fmtNum(ri.quantity, 3)}</td>
-                          <td>{fmtNum(ri.net_mass_kg, 3)}</td>
-                          <td>{fmtNum(em?.embedded_emissions_tco2e ?? null, 3)}</td>
+                          <td>{v.line.cn_code}</td>
+                          <td>{v.line.product_sku}</td>
+                          <td>{fmtNum(v.line.quantity ?? null, 3)}</td>
+                          <td>{fmtNum(v.line.net_mass_kg ?? null, 3)}</td>
+                          <td>{fmtNum(v.derived.embedded_tco2e ?? null, 3)}</td>
                           <td>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                              <span className={`gsx-badge ${lock === "locked" ? "gsx-badgeLocked" : "gsx-badgeEditable"}`}>
-                                {lock === "locked" ? `Locked (${rep?.status || ""})` : "Editable"}
-                              </span>
-                              <span className={`gsx-badge ${src === "supplier_actual" ? "gsx-badgeActual" : "gsx-badgeDefault"}`}>
-                                {src === "supplier_actual" ? "Supplier actual" : "Default fallback"}
-                              </span>
-                              <span className="gsx-badge">{avs === "actual" ? "Actual" : "Estimated"}</span>
+                              <span className={`gsx-badge ${lock === "locked" ? "gsx-badgeLocked" : "gsx-badgeEditable"}`}>{lock === "locked" ? "Locked" : "Editable"}</span>
+                              <span className={`gsx-badge ${src === "supplier_actual" ? "gsx-badgeActual" : "gsx-badgeDefault"}`}>{src === "supplier_actual" ? "Supplier actual" : "Default fallback"}</span>
                             </div>
                           </td>
                         </tr>
@@ -560,7 +600,7 @@ export default function EmissionsReviewPage() {
               )}
 
               <div className="gsx-muted" style={{ marginTop: 10, fontSize: 12 }}>
-                Locked is derived from report status (non draft). Supplier actual vs default uses supplier_emissions.updated_by_supplier.
+                Locked is derived from presence of a non-draft report for the same importer org and quarter. Data source is derived from supplier_portal_submissions.payload.
               </div>
             </>
           ) : null}
