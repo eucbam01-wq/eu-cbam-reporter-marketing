@@ -15,11 +15,13 @@ export default function App({ Component, pageProps }: AppProps) {
   const isImporterConsole =
     router.pathname === "/app" ||
     router.pathname.startsWith("/importer/") ||
+    router.pathname.startsWith("/imports/") ||
     router.asPath === "/app" ||
     router.asPath.startsWith("/app/") ||
     router.asPath.startsWith("/app?") ||
     router.asPath.startsWith("/app#") ||
-    router.asPath.startsWith("/importer/");
+    router.asPath.startsWith("/importer/") ||
+    router.asPath.startsWith("/imports/");
 
   const getLayout =
     (Component as any).getLayout ||
