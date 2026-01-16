@@ -807,6 +807,9 @@ export default function AppPage() {
             <a className="gsx-navItem" href="/importer/supplier-links">
               <span>Suppliers</span>
             </a>
+            <a className="gsx-navItem" href="/importer/imports">
+              <span>Import uploads</span>
+            </a>
             <a className="gsx-navItem" href="/importer/entities">
               <span>Entities</span>
             </a>
@@ -993,6 +996,7 @@ export default function AppPage() {
   );
 }
 // FILE: marketing/pages/app.tsx
+
 
 
 
