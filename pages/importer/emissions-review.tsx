@@ -164,7 +164,45 @@ export default function EmissionsReviewPage() {
         setLoading(true);
         setError(null);
 
-        const { data: reportItems, error: riErr } = await supabase.rpc("list_report_items_for_importer");
+        // IMPORTANT: Avoid relying on list_report_items_for_importer RPC.
+        // This screen is read-only and should load via table reads under RLS.
+
+        const { data: reports, error: rErr } = await supabase
+          .from("reports")
+          .select("id, importer_org_id, quarter_year, status")
+          .order("created_at", { ascending: false });
+
+        if (rErr) throw rErr;
+
+        const reportsMap: Record<string, ReportRow> = {};
+        (reports || []).forEach((r: any) => {
+          if (!r?.id) return;
+          reportsMap[r.id] = {
+            id: r.id,
+            importer_org_id: r.importer_org_id,
+            quarter_year: r.quarter_year,
+            status: r.status,
+          };
+        });
+
+        const reportIds = Object.keys(reportsMap);
+
+        if (!reportIds.length) {
+          if (!cancelled) {
+            setReportsById(reportsMap);
+            setLines([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const { data: reportItems, error: riErr } = await supabase
+          .from("report_items")
+          .select(
+            "id, report_id, cn_code_id, cn_code, goods_description, quantity, net_mass_kg, country_of_origin, procedure_code, supplier_name, supplier_reference"
+          )
+          .in("report_id", reportIds);
+
         if (riErr) throw riErr;
 
         const reportItemRows: ReportItemRow[] = (reportItems || []).map((r: any) => ({
@@ -180,26 +218,6 @@ export default function EmissionsReviewPage() {
           supplier_name: r.supplier_name,
           supplier_reference: r.supplier_reference ?? null,
         }));
-
-        const reportIds = Array.from(new Set(reportItemRows.map((r) => r.report_id).filter(Boolean)));
-
-        const reportsMap: Record<string, ReportRow> = {};
-        if (reportIds.length) {
-          const { data: reports, error: rErr } = await supabase
-            .from("reports")
-            .select("id, importer_org_id, quarter_year, status")
-            .in("id", reportIds);
-
-          if (rErr) throw rErr;
-          (reports || []).forEach((r: any) => {
-            reportsMap[r.id] = {
-              id: r.id,
-              importer_org_id: r.importer_org_id,
-              quarter_year: r.quarter_year,
-              status: r.status,
-            };
-          });
-        }
 
         const reportItemIds = reportItemRows.map((r) => r.id);
         const emissionsMap: Record<string, SupplierEmissionsRow> = {};
