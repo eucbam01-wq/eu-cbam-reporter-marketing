@@ -1,4 +1,4 @@
-// FILE: marketing/pages/app.tsx
+﻿// FILE: marketing/pages/app.tsx
 import Head from "next/head";
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -25,11 +25,11 @@ type GridRow = {
 };
 
 function formatEUR(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "€--";
+  if (value === null || value === undefined || Number.isNaN(value)) return "â‚¬--";
   try {
     return new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
   } catch {
-    return `€${Math.round(value).toString()}`;
+    return `â‚¬${Math.round(value).toString()}`;
   }
 }
 
@@ -47,7 +47,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000481",
     cnCode: "7318",
     assetLabel: "Steel Fasteners",
-    originFlag: "🇹🇷",
+    originFlag: "ðŸ‡¹ðŸ‡·",
     originName: "Turkey",
     netWeightTonnes: 12.4,
     emissionsTco2e: 28.9,
@@ -57,7 +57,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000482",
     cnCode: "7604",
     assetLabel: "Aluminium Bars and Rods",
-    originFlag: "🇳🇴",
+    originFlag: "ðŸ‡³ðŸ‡´",
     originName: "Norway",
     netWeightTonnes: 8.1,
     emissionsTco2e: 10.2,
@@ -67,7 +67,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000483",
     cnCode: "7208",
     assetLabel: "Hot Rolled Steel",
-    originFlag: "🇮🇳",
+    originFlag: "ðŸ‡®ðŸ‡³",
     originName: "India",
     netWeightTonnes: 26.7,
     emissionsTco2e: 74.3,
@@ -77,7 +77,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000484",
     cnCode: "2818",
     assetLabel: "Aluminium Oxide",
-    originFlag: "🇲🇦",
+    originFlag: "ðŸ‡²ðŸ‡¦",
     originName: "Morocco",
     netWeightTonnes: 5.0,
     emissionsTco2e: 6.6,
@@ -87,7 +87,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000485",
     cnCode: "3102",
     assetLabel: "Nitrogen Fertiliser",
-    originFlag: "🇪🇬",
+    originFlag: "ðŸ‡ªðŸ‡¬",
     originName: "Egypt",
     netWeightTonnes: 14.9,
     emissionsTco2e: 22.4,
@@ -993,3 +993,5 @@ export default function AppPage() {
   );
 }
 // FILE: marketing/pages/app.tsx
+
+
