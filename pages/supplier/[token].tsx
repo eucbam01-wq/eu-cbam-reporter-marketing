@@ -542,6 +542,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       };
     }
 
+    // Mark link as viewed for importer dashboard (best-effort; never block portal load)
+    await supabase.rpc("mark_supplier_request_viewed" as any, { p_token: token } as any);
+
     // Optional: get context to derive locale/name if present. If it fails, still allow render.
     let meta: SupplierMeta = { supplierName: null, companyName: null, locale: null };
 
