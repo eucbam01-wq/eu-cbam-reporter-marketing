@@ -123,7 +123,10 @@ export default function CreateSupplierLinkPage() {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h1 style={{ margin: 0 }}>Create supplier link</h1>
-        <Link href="/importer/supplier-links">Back</Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Link href="/importer/supplier-links">Supplier links</Link>
+          <a href="/app" style={{ textDecoration: "underline" }}>App</a>
+        </div>
       </div>
 
       {!hasSessionChecked ? (
