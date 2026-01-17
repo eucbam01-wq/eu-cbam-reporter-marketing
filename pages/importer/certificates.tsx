@@ -46,6 +46,16 @@ type PurchaseRow = {
   created_at: string;
 };
 
+type CarryRow = {
+  importer_org_id: string;
+  year: number;
+  certificates_required: number | null;
+  certificates_purchased: number | null;
+  net_for_year: number | null;
+  cumulative_balance: number | null;
+  carryover_available: number | null;
+};
+
 type TabKey = "coverage" | "purchases" | "forecast";
 
 function fmtNum(n: number | null | undefined, dp = 2) {
@@ -85,6 +95,7 @@ export default function CertificatesPage() {
   const [forecastRows, setForecastRows] = useState<ForecastRow[]>([]);
   const [coverageRows, setCoverageRows] = useState<CoverageRow[]>([]);
   const [purchaseRows, setPurchaseRows] = useState<PurchaseRow[]>([]);
+  const [carryRows, setCarryRows] = useState<CarryRow[]>([]);
 
   const [purchaseDate, setPurchaseDate] = useState<string>("");
   const [purchaseYear, setPurchaseYear] = useState<string>("");
@@ -198,6 +209,7 @@ export default function CertificatesPage() {
         setForecastRows([]);
         setCoverageRows([]);
         setPurchaseRows([]);
+        setCarryRows([]);
         return;
       }
 
@@ -219,6 +231,14 @@ export default function CertificatesPage() {
           .limit(5000);
         if (cErr) throw cErr;
 
+
+        const { data: carry, error: carryErr } = await supabase
+          .from("cbam_certificate_carryover")
+          .select("importer_org_id, year, certificates_required, certificates_purchased, net_for_year, cumulative_balance, carryover_available")
+          .eq("importer_org_id", orgId)
+          .order("year", { ascending: false })
+          .limit(50);
+        if (carryErr) throw carryErr;
         const { data: purchases, error: pErr } = await supabase
           .from("cbam_certificate_purchases")
           .select("id, importer_org_id, purchase_date, year, certificates_purchased, unit_price_eur, notes, created_at")
@@ -571,6 +591,40 @@ export default function CertificatesPage() {
                         <td>{fmtNum(r.certificates_required, 2)}</td>
                         <td>{fmtNum(r.certificates_purchased, 2)}</td>
                         <td>{fmtNum(r.certificates_gap, 2)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+
+              <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 6 }}>Carryover (cumulative balance)</div>
+              <table className="gsx-table">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Required</th>
+                    <th>Purchased</th>
+                    <th>Net</th>
+                    <th>Cumulative</th>
+                    <th>Carryover</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {carryRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="gsx-muted">
+                        No carryover data
+                      </td>
+                    </tr>
+                  ) : (
+                    carryRows.map((c) => (
+                      <tr key={String(c.year)}>
+                        <td style={{ fontWeight: 900 }}>{c.year}</td>
+                        <td>{fmtNum(c.certificates_required, 2)}</td>
+                        <td>{fmtNum(c.certificates_purchased, 2)}</td>
+                        <td>{fmtNum(c.net_for_year, 2)}</td>
+                        <td>{fmtNum(c.cumulative_balance, 2)}</td>
+                        <td>{fmtNum(c.carryover_available, 2)}</td>
                       </tr>
                     ))
                   )}
