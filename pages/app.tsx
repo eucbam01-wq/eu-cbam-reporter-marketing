@@ -801,7 +801,7 @@ export default function AppPage() {
             <a className="gsx-navItem gsx-navItemActive" href="/app" aria-current="page">
               <span>Command Center</span>
             </a>
-            <a className="gsx-navItem" href="/importer/audit">
+            <a className="gsx-navItem" href="/importer/emissions-review">
               <span>Reporting</span>
             </a>
             <a className="gsx-navItem" href="/importer/supplier-links">
