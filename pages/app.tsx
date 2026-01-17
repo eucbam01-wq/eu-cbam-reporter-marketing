@@ -1,4 +1,4 @@
-﻿// FILE: marketing/pages/app.tsx
+﻿// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\app.tsx
 import Head from "next/head";
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -807,6 +807,9 @@ export default function AppPage() {
             <a className="gsx-navItem" href="/importer/supplier-links">
               <span>Suppliers</span>
             </a>
+            <a className="gsx-navItem" href="/importer/campaigns">
+              <span>Campaigns</span>
+            </a>
             <a className="gsx-navItem" href="/imports/upload">
               <span>Import uploads</span>
             </a>
@@ -998,8 +1001,7 @@ export default function AppPage() {
     </div>
   );
 }
-// FILE: marketing/pages/app.tsx
-
+// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\app.tsx
 
 
 
