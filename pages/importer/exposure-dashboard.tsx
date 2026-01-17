@@ -335,9 +335,10 @@ export default function ExposureDashboardPage() {
       <main className="gsx-shell">
         <div className="gsx-top">
           <h1 className="gsx-title">Exposure dashboard</h1>
-          <div style={{display:"flex",gap:12}}>
-          <Link className="gsx-link" href="/app">Command Center</Link>
-        </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <Link className="gsx-link" href="/app">Command Center</Link>
+            <Link className="gsx-link" href="/importer/certificates">Certificates</Link>
+          </div>
         </div>
 
         <section className="gsx-card">
