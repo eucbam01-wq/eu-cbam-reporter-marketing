@@ -807,9 +807,6 @@ export default function AppPage() {
             <a className="gsx-navItem" href="/importer/supplier-links">
               <span>Suppliers</span>
             </a>
-            <a className="gsx-navItem" href="/importer/campaigns">
-              <span>Campaigns</span>
-            </a>
             <a className="gsx-navItem" href="/imports/upload">
               <span>Import uploads</span>
             </a>
