@@ -804,6 +804,9 @@ export default function AppPage() {
             <a className="gsx-navItem" href="/importer/emissions-review">
               <span>Reporting</span>
             </a>
+            <a className="gsx-navItem" href="/importer/exposure-dashboard">
+              <span>Exposure dashboard</span>
+            </a>
             <a className="gsx-navItem" href="/importer/supplier-links">
               <span>Suppliers</span>
             </a>
