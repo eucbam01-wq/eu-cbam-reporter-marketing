@@ -97,7 +97,12 @@ export default function ImporterSupplierLinksPage() {
         if (error) throw error;
 
         const list = Array.isArray(data) ? (data as SupplierRequestRow[]) : [];
-        if (!cancelled) setRows(list);
+        const sorted = [...list].sort((a, b) => {
+          const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return bt - at;
+        });
+        if (!cancelled) setRows(sorted);
       } catch (e: any) {
         if (!cancelled) setErr(e?.message || String(e));
       } finally {
@@ -366,7 +371,7 @@ export default function ImporterSupplierLinksPage() {
                   <th>Status</th>
                   <th>Uses</th>
                   <th>Last used</th>
-                  <th>Expires</th>
+                  <th>Token Generated</th>
                   <th>Token expires</th>
                   <th>Actions</th>
                 </tr>
@@ -426,7 +431,7 @@ export default function ImporterSupplierLinksPage() {
                         </td>
                         <td>{usesText}</td>
                         <td>{fmtDate(it.last_used_at)}</td>
-                        <td>{fmtDate(it.expires_at)}</td>
+                        <td>{fmtDate(it.created_at)}</td>
                         <td>{fmtDate(it.token_expires_at)}</td>
                         <td>
                           <button
