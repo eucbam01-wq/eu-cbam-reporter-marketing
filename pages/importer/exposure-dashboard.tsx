@@ -303,7 +303,6 @@ export default function ExposureDashboardPage() {
         <div className="gsx-top">
           <h1 className="gsx-title">Exposure dashboard</h1>
           <div style={{display:"flex",gap:12}}>
-          <Link className="gsx-link" href="/app">Back</Link>
           <Link className="gsx-link" href="/app">Command Center</Link>
         </div>
         </div>
