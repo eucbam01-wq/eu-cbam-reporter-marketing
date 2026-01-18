@@ -32,6 +32,14 @@ function fmtNum(n: number | null | undefined, dp = 2) {
   return x.toLocaleString(undefined, { maximumFractionDigits: dp, minimumFractionDigits: 0 });
 }
 
+type ViewMode = "compare" | "mixed" | "actual" | "default";
+
+function getRowEmbedded(r: ExposureRow, viewMode: ViewMode): number | null {
+  if (viewMode === "actual") return r.embedded_tco2e_actual_only ?? null;
+  if (viewMode === "default") return r.embedded_tco2e_default_only ?? null;
+  return r.embedded_tco2e_mixed ?? null;
+}
+
 function safeLower(s: any) {
   return String(s || "").trim().toLowerCase();
 }
@@ -45,7 +53,7 @@ export default function ExposureDashboardPage() {
   const [rows, setRows] = useState<ExposureRow[]>([]);
   const [search, setSearch] = useState("");
   const [quarter, setQuarter] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"compare" | "mixed" | "actual" | "default">("compare");
+  const [viewMode, setViewMode] = useState<ViewMode>("compare");
 
   const quarterOptions = useMemo(() => {
     const uniq = new Set<string>();
@@ -69,15 +77,6 @@ export default function ExposureDashboardPage() {
         return sup.includes(q) || cn.includes(q) || origin.includes(q) || qy.includes(q);
       });
   }, [rows, search, quarter]);
-
-const getEmbeddedForView = (r: ExposureRow, mode: "compare" | "mixed" | "actual" | "default") => {
-  if (mode === "actual") return Number(r.embedded_tco2e_actual_only || 0);
-  if (mode === "default") return Number(r.embedded_tco2e_default_only || 0);
-  if (mode === "mixed") return Number(r.embedded_tco2e_mixed || 0);
-  return Number(r.embedded_tco2e_mixed || 0);
-};
-
-
 
   
   const kpis = useMemo(() => {
@@ -105,193 +104,187 @@ const getEmbeddedForView = (r: ExposureRow, mode: "compare" | "mixed" | "actual"
   }, [filtered, viewMode]);
 
 
-  
-const bySupplier = useMemo(() => {
-  const map = new Map<
-    string,
-    {
+    const bySupplier = useMemo(() => {
+    type Agg = {
       supplier_name: string;
       lines: number;
       netMass: number;
       cnCodes: number;
       origins: number;
       embedded: number;
-      embedded_actual: number;
-      embedded_default: number;
-      embedded_delta: number;
-    }
-  >();
-  const cnBy = new Map<string, Set<string>>();
-  const originBy = new Map<string, Set<string>>();
+      embedded_actual?: number;
+      embedded_default?: number;
+      embedded_delta?: number;
+    };
 
-  for (const r of filtered) {
-    const key = String(r.supplier_name || "-");
-    if (!map.has(key)) {
-      map.set(key, {
-        supplier_name: key,
-        lines: 0,
-        netMass: 0,
-        cnCodes: 0,
-        origins: 0,
-        embedded: 0,
-        embedded_actual: 0,
-        embedded_default: 0,
-        embedded_delta: 0,
-      });
-      cnBy.set(key, new Set());
-      originBy.set(key, new Set());
-    }
-    const m = map.get(key)!;
-    m.lines += 1;
-    m.netMass += Number(r.total_net_mass_kg || 0);
+    const map = new Map<string, Agg>();
+    const cnBy = new Map<string, Set<string>>();
+    const originBy = new Map<string, Set<string>>();
 
-    if (viewMode === "compare") {
-      const a = Number(r.embedded_tco2e_actual_only || 0);
-      const d = Number(r.embedded_tco2e_default_only || 0);
-      m.embedded_actual += a;
-      m.embedded_default += d;
-      m.embedded_delta += a - d;
-      m.embedded += a;
-    } else {
-      m.embedded += getEmbeddedForView(r, viewMode);
+    for (const r of filtered) {
+      const key = String(r.supplier_name || "-");
+      if (!map.has(key)) {
+        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0, embedded_actual: 0, embedded_default: 0, embedded_delta: 0 });
+        cnBy.set(key, new Set());
+        originBy.set(key, new Set());
+      }
+      const m = map.get(key)!;
+      m.lines += 1;
+      m.netMass += Number(r.total_net_mass_kg || 0);
+      if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
+      if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
+
+      if (viewMode === "compare") {
+        const a = Number(r.embedded_tco2e_actual_only || 0);
+        const d = Number(r.embedded_tco2e_default_only || 0);
+        m.embedded_actual = (m.embedded_actual || 0) + a;
+        m.embedded_default = (m.embedded_default || 0) + d;
+      } else {
+        const v =
+          viewMode === "actual"
+            ? r.embedded_tco2e_actual_only
+            : viewMode === "default"
+            ? r.embedded_tco2e_default_only
+            : r.embedded_tco2e_mixed;
+        m.embedded += Number(v || 0);
+      }
     }
 
-    if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
-    if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
-  }
+    for (const [k, m] of map.entries()) {
+      m.cnCodes = cnBy.get(k)?.size || 0;
+      m.origins = originBy.get(k)?.size || 0;
+      if (viewMode === "compare") {
+        const a = Number(m.embedded_actual || 0);
+        const d = Number(m.embedded_default || 0);
+        m.embedded_delta = a - d;
+        m.embedded = a;
+      }
+    }
 
-  for (const [k, m] of map.entries()) {
-    m.cnCodes = cnBy.get(k)?.size || 0;
-    m.origins = originBy.get(k)?.size || 0;
-  }
+    return Array.from(map.values()).sort((a, b) => (viewMode === "compare" ? Number(b.embedded_actual || 0) - Number(a.embedded_actual || 0) : b.embedded - a.embedded));
+  }, [filtered, viewMode]);
 
-  const sorted = Array.from(map.values());
-  if (viewMode === "compare") return sorted.sort((a, b) => b.embedded_actual - a.embedded_actual);
-  return sorted.sort((a, b) => b.embedded - a.embedded);
-}, [filtered, viewMode]);
 
-const byCnCode = useMemo(() => {
-  const map = new Map<
-    string,
-    {
+    const byCnCode = useMemo(() => {
+    type Agg = {
       cn_code: string;
       lines: number;
+      netMass: number;
       suppliers: number;
       origins: number;
       embedded: number;
-      embedded_actual: number;
-      embedded_default: number;
-      embedded_delta: number;
+      embedded_actual?: number;
+      embedded_default?: number;
+      embedded_delta?: number;
+    };
+
+    const map = new Map<string, Agg>();
+    const supBy = new Map<string, Set<string>>();
+    const originBy = new Map<string, Set<string>>();
+
+    for (const r of filtered) {
+      const key = String(r.cn_code || "-");
+      if (!map.has(key)) {
+        map.set(key, { cn_code: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, origins: 0, embedded_actual: 0, embedded_default: 0, embedded_delta: 0 });
+        supBy.set(key, new Set());
+        originBy.set(key, new Set());
+      }
+      const m = map.get(key)!;
+      m.lines += 1;
+      m.netMass += Number(r.total_net_mass_kg || 0);
+      if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
+      if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
+
+      if (viewMode === "compare") {
+        const a = Number(r.embedded_tco2e_actual_only || 0);
+        const d = Number(r.embedded_tco2e_default_only || 0);
+        m.embedded_actual = (m.embedded_actual || 0) + a;
+        m.embedded_default = (m.embedded_default || 0) + d;
+      } else {
+        const v =
+          viewMode === "actual"
+            ? r.embedded_tco2e_actual_only
+            : viewMode === "default"
+            ? r.embedded_tco2e_default_only
+            : r.embedded_tco2e_mixed;
+        m.embedded += Number(v || 0);
+      }
     }
-  >();
-  const supplierBy = new Map<string, Set<string>>();
-  const originBy = new Map<string, Set<string>>();
 
-  for (const r of filtered) {
-    const key = String(r.cn_code || "-");
-    if (!map.has(key)) {
-      map.set(key, {
-        cn_code: key,
-        lines: 0,
-        suppliers: 0,
-        origins: 0,
-        embedded: 0,
-        embedded_actual: 0,
-        embedded_default: 0,
-        embedded_delta: 0,
-      });
-      supplierBy.set(key, new Set());
-      originBy.set(key, new Set());
-    }
-    const m = map.get(key)!;
-    m.lines += 1;
-
-    if (viewMode === "compare") {
-      const a = Number(r.embedded_tco2e_actual_only || 0);
-      const d = Number(r.embedded_tco2e_default_only || 0);
-      m.embedded_actual += a;
-      m.embedded_default += d;
-      m.embedded_delta += a - d;
-      m.embedded += a;
-    } else {
-      m.embedded += getEmbeddedForView(r, viewMode);
+    for (const [k, m] of map.entries()) {
+      m.suppliers = supBy.get(k)?.size || 0;
+      m.origins = originBy.get(k)?.size || 0;
+      if (viewMode === "compare") {
+        const a = Number(m.embedded_actual || 0);
+        const d = Number(m.embedded_default || 0);
+        m.embedded_delta = a - d;
+        m.embedded = a;
+      }
     }
 
-    if (r.supplier_name) supplierBy.get(key)!.add(String(r.supplier_name));
-    if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
-  }
+    return Array.from(map.values()).sort((a, b) => (viewMode === "compare" ? Number(b.embedded_actual || 0) - Number(a.embedded_actual || 0) : b.embedded - a.embedded));
+  }, [filtered, viewMode]);
 
-  for (const [k, m] of map.entries()) {
-    m.suppliers = supplierBy.get(k)?.size || 0;
-    m.origins = originBy.get(k)?.size || 0;
-  }
 
-  const sorted = Array.from(map.values());
-  if (viewMode === "compare") return sorted.sort((a, b) => b.embedded_actual - a.embedded_actual);
-  return sorted.sort((a, b) => b.embedded - a.embedded);
-}, [filtered, viewMode]);
-
-const byOrigin = useMemo(() => {
-  const map = new Map<
-    string,
-    {
-      origin: string;
+    const byOrigin = useMemo(() => {
+    type Agg = {
+      country_of_origin: string;
       lines: number;
+      netMass: number;
       suppliers: number;
       cnCodes: number;
       embedded: number;
-      embedded_actual: number;
-      embedded_default: number;
-      embedded_delta: number;
+      embedded_actual?: number;
+      embedded_default?: number;
+      embedded_delta?: number;
+    };
+
+    const map = new Map<string, Agg>();
+    const supBy = new Map<string, Set<string>>();
+    const cnBy = new Map<string, Set<string>>();
+
+    for (const r of filtered) {
+      const key = String(r.country_of_origin || "-");
+      if (!map.has(key)) {
+        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, cnCodes: 0, embedded_actual: 0, embedded_default: 0, embedded_delta: 0 });
+        supBy.set(key, new Set());
+        cnBy.set(key, new Set());
+      }
+      const m = map.get(key)!;
+      m.lines += 1;
+      m.netMass += Number(r.total_net_mass_kg || 0);
+      if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
+      if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
+
+      if (viewMode === "compare") {
+        const a = Number(r.embedded_tco2e_actual_only || 0);
+        const d = Number(r.embedded_tco2e_default_only || 0);
+        m.embedded_actual = (m.embedded_actual || 0) + a;
+        m.embedded_default = (m.embedded_default || 0) + d;
+      } else {
+        const v =
+          viewMode === "actual"
+            ? r.embedded_tco2e_actual_only
+            : viewMode === "default"
+            ? r.embedded_tco2e_default_only
+            : r.embedded_tco2e_mixed;
+        m.embedded += Number(v || 0);
+      }
     }
-  >();
-  const supplierBy = new Map<string, Set<string>>();
-  const cnBy = new Map<string, Set<string>>();
 
-  for (const r of filtered) {
-    const key = String(r.country_of_origin || "-");
-    if (!map.has(key)) {
-      map.set(key, {
-        origin: key,
-        lines: 0,
-        suppliers: 0,
-        cnCodes: 0,
-        embedded: 0,
-        embedded_actual: 0,
-        embedded_default: 0,
-        embedded_delta: 0,
-      });
-      supplierBy.set(key, new Set());
-      cnBy.set(key, new Set());
-    }
-    const m = map.get(key)!;
-    m.lines += 1;
-
-    if (viewMode === "compare") {
-      const a = Number(r.embedded_tco2e_actual_only || 0);
-      const d = Number(r.embedded_tco2e_default_only || 0);
-      m.embedded_actual += a;
-      m.embedded_default += d;
-      m.embedded_delta += a - d;
-      m.embedded += a;
-    } else {
-      m.embedded += getEmbeddedForView(r, viewMode);
+    for (const [k, m] of map.entries()) {
+      m.suppliers = supBy.get(k)?.size || 0;
+      m.cnCodes = cnBy.get(k)?.size || 0;
+      if (viewMode === "compare") {
+        const a = Number(m.embedded_actual || 0);
+        const d = Number(m.embedded_default || 0);
+        m.embedded_delta = a - d;
+        m.embedded = a;
+      }
     }
 
-    if (r.supplier_name) supplierBy.get(key)!.add(String(r.supplier_name));
-    if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
-  }
-
-  for (const [k, m] of map.entries()) {
-    m.suppliers = supplierBy.get(k)?.size || 0;
-    m.cnCodes = cnBy.get(k)?.size || 0;
-  }
-
-  const sorted = Array.from(map.values());
-  if (viewMode === "compare") return sorted.sort((a, b) => b.embedded_actual - a.embedded_actual);
-  return sorted.sort((a, b) => b.embedded - a.embedded);
-}, [filtered, viewMode]);
-
+    return Array.from(map.values()).sort((a, b) => (viewMode === "compare" ? Number(b.embedded_actual || 0) - Number(a.embedded_actual || 0) : b.embedded - a.embedded));
+  }, [filtered, viewMode]);
 
 
   useEffect(() => {
@@ -353,8 +346,6 @@ const byOrigin = useMemo(() => {
       cancelled = true;
     };
   }, [supabase]);
-
-
 
   return (
     <div className="gsx-root">
@@ -540,39 +531,7 @@ const byOrigin = useMemo(() => {
                             <th>Δ</th>
                           </>
                         ) : (
-                          {viewMode === "compare" ? (
-                          <>
-                            <th>Actual</th>
-                            <th>Default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          {viewMode === "compare" ? (
-                          <>
-                            <th>Actual</th>
-                            <th>Default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          {viewMode === "compare" ? (
-                          <>
-                            <th>Embedded actual</th>
-                            <th>Embedded default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          {viewMode === "compare" ? (
-                          <>
-                            <th>Embedded actual</th>
-                            <th>Embedded default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
                           <th>Embedded tCO2e</th>
-                        )}
-                        )}
-                        )}
-                        )}
                         )}
                       </tr>
                     </thead>
@@ -584,14 +543,14 @@ const byOrigin = useMemo(() => {
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
                           {viewMode === "compare" ? (
-                          <>
-                            <td>{fmtNum(s.embedded_actual, 2)}</td>
-                            <td>{fmtNum(s.embedded_default, 2)}</td>
-                            <td>{fmtNum(s.embedded_delta, 2)}</td>
-                          </>
-                        ) : (
-                          <td>{fmtNum(s.embedded, 2)}</td>
-                        )}
+                            <>
+                              <td>{fmtNum((s as any).embedded_actual ?? null, 2)}</td>
+                              <td>{fmtNum((s as any).embedded_default ?? null, 2)}</td>
+                              <td>{fmtNum((s as any).embedded_delta ?? null, 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(s.embedded, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -610,7 +569,15 @@ const byOrigin = useMemo(() => {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Actual</th>
+                            <th>Default</th>
+                            <th>Δ</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -621,14 +588,14 @@ const byOrigin = useMemo(() => {
                           <td>{c.suppliers.toLocaleString()}</td>
                           <td>{c.origins.toLocaleString()}</td>
                           {viewMode === "compare" ? (
-                          <>
-                            <td>{fmtNum(c.embedded_actual, 2)}</td>
-                            <td>{fmtNum(c.embedded_default, 2)}</td>
-                            <td>{fmtNum(c.embedded_delta, 2)}</td>
-                          </>
-                        ) : (
-                          <td>{fmtNum(c.embedded, 2)}</td>
-                        )}
+                            <>
+                              <td>{fmtNum((c as any).embedded_actual ?? null, 2)}</td>
+                              <td>{fmtNum((c as any).embedded_default ?? null, 2)}</td>
+                              <td>{fmtNum((c as any).embedded_delta ?? null, 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(c.embedded, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -647,7 +614,15 @@ const byOrigin = useMemo(() => {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Actual</th>
+                            <th>Default</th>
+                            <th>Δ</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -658,14 +633,14 @@ const byOrigin = useMemo(() => {
                           <td>{o.suppliers.toLocaleString()}</td>
                           <td>{o.cnCodes.toLocaleString()}</td>
                           {viewMode === "compare" ? (
-                          <>
-                            <td>{fmtNum(o.embedded_actual, 2)}</td>
-                            <td>{fmtNum(o.embedded_default, 2)}</td>
-                            <td>{fmtNum(o.embedded_delta, 2)}</td>
-                          </>
-                        ) : (
-                          <td>{fmtNum(o.embedded, 2)}</td>
-                        )}
+                            <>
+                              <td>{fmtNum((o as any).embedded_actual ?? null, 2)}</td>
+                              <td>{fmtNum((o as any).embedded_default ?? null, 2)}</td>
+                              <td>{fmtNum((o as any).embedded_delta ?? null, 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(o.embedded, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -682,7 +657,15 @@ const byOrigin = useMemo(() => {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Actual</th>
+                            <th>Default</th>
+                            <th>Δ</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -697,10 +680,10 @@ const byOrigin = useMemo(() => {
                             <>
                               <td>{fmtNum(r.embedded_tco2e_actual_only ?? null, 2)}</td>
                               <td>{fmtNum(r.embedded_tco2e_default_only ?? null, 2)}</td>
-                              <td>{fmtNum(Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0), 2)}</td>
+                              <td>{fmtNum((Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0)) ?? null, 2)}</td>
                             </>
                           ) : (
-                            <td>{fmtNum(getEmbeddedForView(r, viewMode) ?? null, 2)}</td>
+                            <td>{fmtNum(getRowEmbedded(r, viewMode) ?? null, 2)}</td>
                           )}
                         </tr>
                       ))}
