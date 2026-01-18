@@ -465,7 +465,7 @@ export default function ExposureDashboardPage() {
                   ))}
                 </select>
 
-                <select className="gsx-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as any)}>
+                <select className="gsx-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as ViewMode)}>
                   <option value="compare">View: Actual vs Default</option>
                   <option value="mixed">View: Mixed</option>
                   <option value="actual">View: Supplier actual</option>
@@ -544,9 +544,9 @@ export default function ExposureDashboardPage() {
                           <td>{s.origins.toLocaleString()}</td>
                           {viewMode === "compare" ? (
                             <>
-                              <td>{fmtNum((s as any).embedded_actual ?? null, 2)}</td>
-                              <td>{fmtNum((s as any).embedded_default ?? null, 2)}</td>
-                              <td>{fmtNum((s as any).embedded_delta ?? null, 2)}</td>
+                              <td>{fmtNum(s.embedded_actual, 2)}</td>
+                              <td>{fmtNum(s.embedded_default, 2)}</td>
+                              <td>{fmtNum(s.embedded_delta, 2)}</td>
                             </>
                           ) : (
                             <td>{fmtNum(s.embedded, 2)}</td>
@@ -589,9 +589,9 @@ export default function ExposureDashboardPage() {
                           <td>{c.origins.toLocaleString()}</td>
                           {viewMode === "compare" ? (
                             <>
-                              <td>{fmtNum((c as any).embedded_actual ?? null, 2)}</td>
-                              <td>{fmtNum((c as any).embedded_default ?? null, 2)}</td>
-                              <td>{fmtNum((c as any).embedded_delta ?? null, 2)}</td>
+                              <td>{fmtNum(c.embedded_actual, 2)}</td>
+                              <td>{fmtNum(c.embedded_default, 2)}</td>
+                              <td>{fmtNum(c.embedded_delta, 2)}</td>
                             </>
                           ) : (
                             <td>{fmtNum(c.embedded, 2)}</td>
@@ -634,9 +634,9 @@ export default function ExposureDashboardPage() {
                           <td>{o.cnCodes.toLocaleString()}</td>
                           {viewMode === "compare" ? (
                             <>
-                              <td>{fmtNum((o as any).embedded_actual ?? null, 2)}</td>
-                              <td>{fmtNum((o as any).embedded_default ?? null, 2)}</td>
-                              <td>{fmtNum((o as any).embedded_delta ?? null, 2)}</td>
+                              <td>{fmtNum(o.embedded_actual, 2)}</td>
+                              <td>{fmtNum(o.embedded_default, 2)}</td>
+                              <td>{fmtNum(o.embedded_delta, 2)}</td>
                             </>
                           ) : (
                             <td>{fmtNum(o.embedded, 2)}</td>
@@ -675,15 +675,15 @@ export default function ExposureDashboardPage() {
                           <td style={{ fontWeight: 900 }}>{r.supplier_name || "-"}</td>
                           <td>{r.cn_code || "-"}</td>
                           <td>{r.country_of_origin || "-"}</td>
-                          <td>{fmtNum(r.total_net_mass_kg ?? null, 0)}</td>
+                          <td>{fmtNum(r.total_net_mass_kg, 0)}</td>
                           {viewMode === "compare" ? (
                             <>
-                              <td>{fmtNum(r.embedded_tco2e_actual_only ?? null, 2)}</td>
-                              <td>{fmtNum(r.embedded_tco2e_default_only ?? null, 2)}</td>
-                              <td>{fmtNum((Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0)) ?? null, 2)}</td>
+                              <td>{fmtNum(r.embedded_tco2e_actual_only, 2)}</td>
+                              <td>{fmtNum(r.embedded_tco2e_default_only, 2)}</td>
+                              <td>{fmtNum(Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0), 2)}</td>
                             </>
                           ) : (
-                            <td>{fmtNum(getRowEmbedded(r, viewMode) ?? null, 2)}</td>
+                            <td>{fmtNum(getRowEmbedded(r, viewMode), 2)}</td>
                           )}
                         </tr>
                       ))}
