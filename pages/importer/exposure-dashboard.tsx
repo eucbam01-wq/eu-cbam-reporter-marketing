@@ -377,6 +377,14 @@ export default function ExposureDashboardPage() {
 
               <div className="gsx-kpis">
                 <div className="gsx-kpi">
+                  <p className="gsx-kpiLabel">Δ tCO2e (Actual - Default)</p>
+                  <p className="gsx-kpiValue">{fmtNum(
+                    filtered.reduce((a,r)=>a+Number((r.embedded_tco2e_actual_only||0)-(r.embedded_tco2e_default_only||0)),0),
+                    2
+                  )}</p>
+                </div>
+
+                <div className="gsx-kpi">
                   <p className="gsx-kpiLabel">Embedded tCO2e</p>
                   <p className="gsx-kpiValue">{fmtNum(kpis.embedded, 2)}</p>
                 </div>
