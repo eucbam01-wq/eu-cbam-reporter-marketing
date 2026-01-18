@@ -45,7 +45,7 @@ export default function ExposureDashboardPage() {
   const [rows, setRows] = useState<ExposureRow[]>([]);
   const [search, setSearch] = useState("");
   const [quarter, setQuarter] = useState<string>("");
-  const [scenario, setScenario] = useState<"mixed" | "actual" | "default">("mixed");
+  const [viewMode, setViewMode] = useState<"compare" | "mixed" | "actual" | "default">("compare");
 
   const quarterOptions = useMemo(() => {
     const uniq = new Set<string>();
@@ -70,46 +70,51 @@ export default function ExposureDashboardPage() {
       });
   }, [rows, search, quarter]);
 
+  
   const kpis = useMemo(() => {
     const lineCount = filtered.length;
-    const embedded = filtered.reduce((acc, r) => {
-      const v = scenario === "actual"
-        ? r.embedded_tco2e_actual_only
-        : scenario === "default"
-        ? r.embedded_tco2e_default_only
-        : r.embedded_tco2e_mixed;
-      return acc + Number(v || 0);
-    }, 0);
+
+    const embeddedActual = filtered.reduce((acc, r) => acc + Number(r.embedded_tco2e_actual_only || 0), 0);
+    const embeddedDefault = filtered.reduce((acc, r) => acc + Number(r.embedded_tco2e_default_only || 0), 0);
+    const embeddedMixed = filtered.reduce((acc, r) => acc + Number(r.embedded_tco2e_mixed || 0), 0);
+    const embeddedDelta = embeddedActual - embeddedDefault;
+
     const netMass = filtered.reduce((acc, r) => acc + Number(r.total_net_mass_kg || 0), 0);
     const suppliers = new Set(filtered.map((r) => safeLower(r.supplier_name)).filter(Boolean)).size;
     const cnCodes = new Set(filtered.map((r) => safeLower(r.cn_code)).filter(Boolean)).size;
     const origins = new Set(filtered.map((r) => safeLower(r.country_of_origin)).filter(Boolean)).size;
     const actualLines = filtered.reduce((acc, r) => acc + Number(r.actual_lines || 0), 0);
     const defaultLines = filtered.reduce((acc, r) => acc + Number(r.default_lines || 0), 0);
-    return { lineCount, embedded, netMass, suppliers, cnCodes, origins, actualLines, defaultLines };
-  }, [filtered, scenario]);
+
+    const embedded =
+      viewMode === "actual" ? embeddedActual :
+      viewMode === "default" ? embeddedDefault :
+      viewMode === "mixed" ? embeddedMixed :
+      embeddedMixed;
+
+    return { lineCount, embedded, embeddedActual, embeddedDefault, embeddedMixed, embeddedDelta, netMass, suppliers, cnCodes, origins, actualLines, defaultLines };
+  }, [filtered, viewMode]);
+
 
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; embeddedActual: number; embeddedDefault: number; netMass: number; cnCodes: number; origins: number }>();
+    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; netMass: number; cnCodes: number; origins: number }>();
     const cnBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.supplier_name || "-");
       if (!map.has(key)) {
-        map.set(key, { supplier_name: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, cnCodes: 0, origins: 0 });
+        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0 });
         cnBy.set(key, new Set());
         originBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
-            const v = scenario === "actual"
+            const v = viewMode === "actual"
         ? r.embedded_tco2e_actual_only
-        : scenario === "default"
+        : viewMode === "default"
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
-      m.embeddedActual += Number(r.embedded_tco2e_actual_only || 0);
-      m.embeddedDefault += Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -119,29 +124,27 @@ export default function ExposureDashboardPage() {
       m.origins = originBy.get(k)?.size || 0;
     }
     return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
-  }, [filtered, scenario]);
+  }, [filtered, viewMode]);
 
   const byCnCode = useMemo(() => {
-    const map = new Map<string, { cn_code: string; lines: number; embedded: number; embeddedActual: number; embeddedDefault: number; netMass: number; suppliers: number; origins: number }>();
+    const map = new Map<string, { cn_code: string; lines: number; embedded: number; netMass: number; suppliers: number; origins: number }>();
     const supBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.cn_code || "-");
       if (!map.has(key)) {
-        map.set(key, { cn_code: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, suppliers: 0, origins: 0 });
+        map.set(key, { cn_code: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, origins: 0 });
         supBy.set(key, new Set());
         originBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
-            const v = scenario === "actual"
+            const v = viewMode === "actual"
         ? r.embedded_tco2e_actual_only
-        : scenario === "default"
+        : viewMode === "default"
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
-      m.embeddedActual += Number(r.embedded_tco2e_actual_only || 0);
-      m.embeddedDefault += Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -151,29 +154,27 @@ export default function ExposureDashboardPage() {
       m.origins = originBy.get(k)?.size || 0;
     }
     return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
-  }, [filtered, scenario]);
+  }, [filtered, viewMode]);
 
   const byOrigin = useMemo(() => {
-    const map = new Map<string, { country_of_origin: string; lines: number; embedded: number; embeddedActual: number; embeddedDefault: number; netMass: number; suppliers: number; cnCodes: number }>();
+    const map = new Map<string, { country_of_origin: string; lines: number; embedded: number; netMass: number; suppliers: number; cnCodes: number }>();
     const supBy = new Map<string, Set<string>>();
     const cnBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.country_of_origin || "-");
       if (!map.has(key)) {
-        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, suppliers: 0, cnCodes: 0 });
+        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, cnCodes: 0 });
         supBy.set(key, new Set());
         cnBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
-            const v = scenario === "actual"
+            const v = viewMode === "actual"
         ? r.embedded_tco2e_actual_only
-        : scenario === "default"
+        : viewMode === "default"
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
-      m.embeddedActual += Number(r.embedded_tco2e_actual_only || 0);
-      m.embeddedDefault += Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
@@ -183,7 +184,7 @@ export default function ExposureDashboardPage() {
       m.cnCodes = cnBy.get(k)?.size || 0;
     }
     return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
-  }, [filtered, scenario]);
+  }, [filtered]);
 
   useEffect(() => {
     let cancelled = false;
@@ -363,10 +364,11 @@ export default function ExposureDashboardPage() {
                   ))}
                 </select>
 
-                <select className="gsx-select" value={scenario} onChange={(e) => setScenario(e.target.value as any)}>
-                  <option value="mixed">Scenario: Mixed</option>
-                  <option value="actual">Scenario: Supplier actual</option>
-                  <option value="default">Scenario: Default</option>
+                <select className="gsx-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as any)}>
+                  <option value="compare">View: Actual vs Default</option>
+                  <option value="mixed">View: Mixed</option>
+                  <option value="actual">View: Supplier actual</option>
+                  <option value="default">View: Default</option>
                 </select>
 
                 <input className="gsx-input" placeholder="Search supplier, CN code, origin, quarter" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -381,11 +383,29 @@ export default function ExposureDashboardPage() {
                 <span className="gsx-pill">Default lines: {kpis.defaultLines.toLocaleString()}</span>
               </div>
 
+              
               <div className="gsx-kpis">
-                <div className="gsx-kpi">
-                  <p className="gsx-kpiLabel">Embedded tCO2e</p>
-                  <p className="gsx-kpiValue">{fmtNum(kpis.embedded, 2)}</p>
-                </div>
+                {viewMode === "compare" ? (
+                  <>
+                    <div className="gsx-kpi">
+                      <p className="gsx-kpiLabel">Embedded tCO2e (Actual)</p>
+                      <p className="gsx-kpiValue">{fmtNum(kpis.embeddedActual, 2)}</p>
+                    </div>
+                    <div className="gsx-kpi">
+                      <p className="gsx-kpiLabel">Embedded tCO2e (Default)</p>
+                      <p className="gsx-kpiValue">{fmtNum(kpis.embeddedDefault, 2)}</p>
+                    </div>
+                    <div className="gsx-kpi">
+                      <p className="gsx-kpiLabel">Δ tCO2e (Actual - Default)</p>
+                      <p className="gsx-kpiValue">{fmtNum(kpis.embeddedDelta, 2)}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="gsx-kpi">
+                    <p className="gsx-kpiLabel">Embedded tCO2e</p>
+                    <p className="gsx-kpiValue">{fmtNum(kpis.embedded, 2)}</p>
+                  </div>
+                )}
                 <div className="gsx-kpi">
                   <p className="gsx-kpiLabel">Net mass kg</p>
                   <p className="gsx-kpiValue">{fmtNum(kpis.netMass, 0)}</p>
@@ -393,6 +413,7 @@ export default function ExposureDashboardPage() {
               </div>
 
               <div className="gsx-grid">
+
                 <div className="gsx-card" style={{ padding: 12 }}>
                   <div style={{ fontWeight: 900, marginBottom: 6 }}>Top suppliers by embedded tCO2e (scenario)</div>
                   <table className="gsx-table">
@@ -402,7 +423,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>CN</th>
                         <th>Origins</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -412,7 +433,7 @@ export default function ExposureDashboardPage() {
                           <td>{s.lines.toLocaleString()}</td>
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
-                          <td>{fmtNum(s.embeddedActual, 2)}</td><td>{fmtNum(s.embeddedDefault, 2)}</td><td>{fmtNum(s.embeddedActual - s.embeddedDefault, 2)}</td>
+                          <td>{fmtNum(s.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -431,7 +452,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -441,7 +462,7 @@ export default function ExposureDashboardPage() {
                           <td>{c.lines.toLocaleString()}</td>
                           <td>{c.suppliers.toLocaleString()}</td>
                           <td>{c.origins.toLocaleString()}</td>
-                          <td>{fmtNum(c.embeddedActual, 2)}</td><td>{fmtNum(c.embeddedDefault, 2)}</td><td>{fmtNum(c.embeddedActual - c.embeddedDefault, 2)}</td>
+                          <td>{fmtNum(c.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -460,7 +481,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -470,7 +491,7 @@ export default function ExposureDashboardPage() {
                           <td>{o.lines.toLocaleString()}</td>
                           <td>{o.suppliers.toLocaleString()}</td>
                           <td>{o.cnCodes.toLocaleString()}</td>
-                          <td>{fmtNum(o.embeddedActual, 2)}</td><td>{fmtNum(o.embeddedDefault, 2)}</td><td>{fmtNum(o.embeddedActual - o.embeddedDefault, 2)}</td>
+                          <td>{fmtNum(o.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -487,7 +508,7 @@ export default function ExposureDashboardPage() {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -498,7 +519,7 @@ export default function ExposureDashboardPage() {
                           <td>{r.cn_code || "-"}</td>
                           <td>{r.country_of_origin || "-"}</td>
                           <td>{fmtNum(r.total_net_mass_kg ?? null, 0)}</td>
-                          <td>{fmtNum(r.embedded_tco2e_actual_only ?? null, 2)}</td><td>{fmtNum(r.embedded_tco2e_default_only ?? null, 2)}</td><td>{fmtNum(Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0), 2)}</td>
+                          <td>{fmtNum((scenario === "actual" ? r.embedded_tco2e_actual_only : scenario === "default" ? r.embedded_tco2e_default_only : r.embedded_tco2e_mixed) ?? null, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
