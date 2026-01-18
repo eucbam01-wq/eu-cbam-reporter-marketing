@@ -1,0 +1,3 @@
+﻿import_ref,import_date,supplier_name,supplier_email,cn_code,goods_description,quantity,net_mass_kg,customs_value,country_of_origin,procedure_code
+IMP-TEST-001,2025-12-15,Legal china Test,supplier@example.com,73089000,Steel structures,1000,540,25000,CN,40
+IMP-TEST-002,2025-12-18,Legal china Test,supplier@example.com,73089000,Steel structures,500,270,12000,CN,40
