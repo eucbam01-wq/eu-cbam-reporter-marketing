@@ -292,10 +292,69 @@ const byOrigin = useMemo(() => {
   return sorted.sort((a, b) => b.embedded - a.embedded);
 }, [filtered, viewMode]);
 
-return () => {
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) {
+          window.location.assign("/login");
+          return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        const { data, error: qErr } = await supabase
+          .from("scenario_exposure_by_dimension")
+          .select("report_id, quarter_year, cn_code, supplier_name, country_of_origin, total_quantity, total_net_mass_kg, embedded_tco2e_actual_only, embedded_tco2e_default_only, embedded_tco2e_mixed, actual_lines, default_lines")
+          .order("quarter_year", { ascending: false })
+          .limit(5000);
+
+        if (qErr) throw qErr;
+
+        const nextRows: ExposureRow[] = (data || []).map((r: any) => ({
+          report_id: r.report_id,
+          quarter_year: r.quarter_year ?? null,
+          cn_code: r.cn_code ?? null,
+          supplier_name: r.supplier_name ?? null,
+          country_of_origin: r.country_of_origin ?? null,
+          total_quantity: r.total_quantity ?? null,
+          total_net_mass_kg: r.total_net_mass_kg ?? null,
+          embedded_tco2e_actual_only: r.embedded_tco2e_actual_only ?? null,
+          embedded_tco2e_default_only: r.embedded_tco2e_default_only ?? null,
+          embedded_tco2e_mixed: r.embedded_tco2e_mixed ?? null,
+          actual_lines: r.actual_lines ?? null,
+          default_lines: r.default_lines ?? null,
+        }));
+
+        if (!cancelled) {
+          setRows(nextRows);
+          setLoading(false);
+
+          if (!quarter) {
+            const opts = Array.from(new Set(nextRows.map((r) => String(r.quarter_year || "")).filter(Boolean))).sort();
+            if (opts.length) setQuarter(opts[0]); // newest first due to order
+          }
+        }
+      } catch (ex: any) {
+        if (!cancelled) {
+          setError(ex?.message ?? "Failed to load exposure dashboard.");
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
       cancelled = true;
     };
   }, [supabase]);
+
+
 
   return (
     <div className="gsx-root">
