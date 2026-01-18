@@ -108,6 +108,8 @@ export default function ExposureDashboardPage() {
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
+      m.embeddedActual = (m.embeddedActual || 0) + Number(r.embedded_tco2e_actual_only || 0);
+      m.embeddedDefault = (m.embeddedDefault || 0) + Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -138,6 +140,8 @@ export default function ExposureDashboardPage() {
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
+      m.embeddedActual = (m.embeddedActual || 0) + Number(r.embedded_tco2e_actual_only || 0);
+      m.embeddedDefault = (m.embeddedDefault || 0) + Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -168,6 +172,8 @@ export default function ExposureDashboardPage() {
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
+      m.embeddedActual = (m.embeddedActual || 0) + Number(r.embedded_tco2e_actual_only || 0);
+      m.embeddedDefault = (m.embeddedDefault || 0) + Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
@@ -377,14 +383,6 @@ export default function ExposureDashboardPage() {
 
               <div className="gsx-kpis">
                 <div className="gsx-kpi">
-                  <p className="gsx-kpiLabel">Δ tCO2e (Actual - Default)</p>
-                  <p className="gsx-kpiValue">{fmtNum(
-                    filtered.reduce((a,r)=>a+Number((r.embedded_tco2e_actual_only||0)-(r.embedded_tco2e_default_only||0)),0),
-                    2
-                  )}</p>
-                </div>
-
-                <div className="gsx-kpi">
                   <p className="gsx-kpiLabel">Embedded tCO2e</p>
                   <p className="gsx-kpiValue">{fmtNum(kpis.embedded, 2)}</p>
                 </div>
@@ -404,7 +402,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>CN</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -414,7 +412,7 @@ export default function ExposureDashboardPage() {
                           <td>{s.lines.toLocaleString()}</td>
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
-                          <td>{fmtNum(s.embedded, 2)}</td>
+                          <td>{fmtNum(s.embeddedActual,2)}</td><td>{fmtNum(s.embeddedDefault,2)}</td><td>{fmtNum(s.embeddedActual - s.embeddedDefault,2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -433,7 +431,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -462,7 +460,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -489,7 +487,7 @@ export default function ExposureDashboardPage() {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
