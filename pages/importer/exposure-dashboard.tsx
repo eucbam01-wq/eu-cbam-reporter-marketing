@@ -90,13 +90,13 @@ export default function ExposureDashboardPage() {
   }, [filtered, scenario]);
 
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; embeddedActual: number; embeddedDefault: number; netMass: number; cnCodes: number; origins: number }>();
+    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; netMass: number; cnCodes: number; origins: number }>();
     const cnBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.supplier_name || "-");
       if (!map.has(key)) {
-        map.set(key, { supplier_name: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, cnCodes: 0, origins: 0 });
+        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0 });
         cnBy.set(key, new Set());
         originBy.set(key, new Set());
       }
@@ -396,7 +396,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>CN</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -406,7 +406,7 @@ export default function ExposureDashboardPage() {
                           <td>{s.lines.toLocaleString()}</td>
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
-                          <td>{fmtNum(s.embedded, 2)}</td>
+                          <td>{fmtNum(s.embeddedActual,2)}</td><td>{fmtNum(s.embeddedDefault,2)}</td><td>{fmtNum(s.embeddedActual - s.embeddedDefault,2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -425,7 +425,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -435,7 +435,7 @@ export default function ExposureDashboardPage() {
                           <td>{c.lines.toLocaleString()}</td>
                           <td>{c.suppliers.toLocaleString()}</td>
                           <td>{c.origins.toLocaleString()}</td>
-                          <td>{fmtNum(c.embedded, 2)}</td>
+                          <td>{fmtNum(c.embeddedActual,2)}</td><td>{fmtNum(c.embeddedDefault,2)}</td><td>{fmtNum(c.embeddedActual - c.embeddedDefault,2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -454,7 +454,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -464,7 +464,7 @@ export default function ExposureDashboardPage() {
                           <td>{o.lines.toLocaleString()}</td>
                           <td>{o.suppliers.toLocaleString()}</td>
                           <td>{o.cnCodes.toLocaleString()}</td>
-                          <td>{fmtNum(o.embedded, 2)}</td>
+                          <td>{fmtNum(o.embeddedActual,2)}</td><td>{fmtNum(o.embeddedDefault,2)}</td><td>{fmtNum(o.embeddedActual - o.embeddedDefault,2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -481,7 +481,7 @@ export default function ExposureDashboardPage() {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        <th>Embedded tCO2e</th>
+                        <th>Actual</th><th>Default</th><th>Δ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -492,7 +492,7 @@ export default function ExposureDashboardPage() {
                           <td>{r.cn_code || "-"}</td>
                           <td>{r.country_of_origin || "-"}</td>
                           <td>{fmtNum(r.total_net_mass_kg ?? null, 0)}</td>
-                          <td>{fmtNum((scenario === "actual" ? r.embedded_tco2e_actual_only : scenario === "default" ? r.embedded_tco2e_default_only : r.embedded_tco2e_mixed) ?? null, 2)}</td>
+                          <td>{fmtNum(r.embedded_tco2e_actual_only,2)}</td><td>{fmtNum(r.embedded_tco2e_default_only,2)}</td><td>{fmtNum((r.embedded_tco2e_actual_only||0)-(r.embedded_tco2e_default_only||0),2)}</td>
                         </tr>
                       ))}
                     </tbody>
