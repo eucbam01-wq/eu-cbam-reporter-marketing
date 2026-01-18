@@ -32,14 +32,6 @@ function fmtNum(n: number | null | undefined, dp = 2) {
   return x.toLocaleString(undefined, { maximumFractionDigits: dp, minimumFractionDigits: 0 });
 }
 
-type ViewMode = "compare" | "mixed" | "actual" | "default";
-
-function getRowEmbedded(r: ExposureRow, viewMode: ViewMode): number | null {
-  if (viewMode === "actual") return r.embedded_tco2e_actual_only ?? null;
-  if (viewMode === "default") return r.embedded_tco2e_default_only ?? null;
-  return r.embedded_tco2e_mixed ?? null;
-}
-
 function safeLower(s: any) {
   return String(s || "").trim().toLowerCase();
 }
@@ -53,7 +45,7 @@ export default function ExposureDashboardPage() {
   const [rows, setRows] = useState<ExposureRow[]>([]);
   const [search, setSearch] = useState("");
   const [quarter, setQuarter] = useState<string>("");
-  const [viewMode, setViewMode] = useState<ViewMode>("compare");
+  const [viewMode, setViewMode] = useState<"compare" | "mixed" | "actual" | "default">("compare");
 
   const quarterOptions = useMemo(() => {
     const uniq = new Set<string>();
@@ -104,188 +96,95 @@ export default function ExposureDashboardPage() {
   }, [filtered, viewMode]);
 
 
-    const bySupplier = useMemo(() => {
-    type Agg = {
-      supplier_name: string;
-      lines: number;
-      netMass: number;
-      cnCodes: number;
-      origins: number;
-      embedded: number;
-      embedded_actual?: number;
-      embedded_default?: number;
-      embedded_delta?: number;
-    };
-
-    const map = new Map<string, Agg>();
+  const bySupplier = useMemo(() => {
+    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; netMass: number; cnCodes: number; origins: number }>();
     const cnBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
-
     for (const r of filtered) {
       const key = String(r.supplier_name || "-");
       if (!map.has(key)) {
-        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0, embedded_actual: 0, embedded_default: 0, embedded_delta: 0 });
+        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0 });
         cnBy.set(key, new Set());
         originBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
+            const v = viewMode === "actual"
+        ? r.embedded_tco2e_actual_only
+        : viewMode === "default"
+        ? r.embedded_tco2e_default_only
+        : r.embedded_tco2e_mixed;
+      m.embedded += Number(v || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
-
-      if (viewMode === "compare") {
-        const a = Number(r.embedded_tco2e_actual_only || 0);
-        const d = Number(r.embedded_tco2e_default_only || 0);
-        m.embedded_actual = (m.embedded_actual || 0) + a;
-        m.embedded_default = (m.embedded_default || 0) + d;
-      } else {
-        const v =
-          viewMode === "actual"
-            ? r.embedded_tco2e_actual_only
-            : viewMode === "default"
-            ? r.embedded_tco2e_default_only
-            : r.embedded_tco2e_mixed;
-        m.embedded += Number(v || 0);
-      }
     }
-
     for (const [k, m] of map.entries()) {
       m.cnCodes = cnBy.get(k)?.size || 0;
       m.origins = originBy.get(k)?.size || 0;
-      if (viewMode === "compare") {
-        const a = Number(m.embedded_actual || 0);
-        const d = Number(m.embedded_default || 0);
-        m.embedded_delta = a - d;
-        m.embedded = a;
-      }
     }
-
-    return Array.from(map.values()).sort((a, b) => (viewMode === "compare" ? Number(b.embedded_actual || 0) - Number(a.embedded_actual || 0) : b.embedded - a.embedded));
+    return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
   }, [filtered, viewMode]);
 
-
-    const byCnCode = useMemo(() => {
-    type Agg = {
-      cn_code: string;
-      lines: number;
-      netMass: number;
-      suppliers: number;
-      origins: number;
-      embedded: number;
-      embedded_actual?: number;
-      embedded_default?: number;
-      embedded_delta?: number;
-    };
-
-    const map = new Map<string, Agg>();
+  const byCnCode = useMemo(() => {
+    const map = new Map<string, { cn_code: string; lines: number; embedded: number; netMass: number; suppliers: number; origins: number }>();
     const supBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
-
     for (const r of filtered) {
       const key = String(r.cn_code || "-");
       if (!map.has(key)) {
-        map.set(key, { cn_code: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, origins: 0, embedded_actual: 0, embedded_default: 0, embedded_delta: 0 });
+        map.set(key, { cn_code: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, origins: 0 });
         supBy.set(key, new Set());
         originBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
+            const v = viewMode === "actual"
+        ? r.embedded_tco2e_actual_only
+        : viewMode === "default"
+        ? r.embedded_tco2e_default_only
+        : r.embedded_tco2e_mixed;
+      m.embedded += Number(v || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
-
-      if (viewMode === "compare") {
-        const a = Number(r.embedded_tco2e_actual_only || 0);
-        const d = Number(r.embedded_tco2e_default_only || 0);
-        m.embedded_actual = (m.embedded_actual || 0) + a;
-        m.embedded_default = (m.embedded_default || 0) + d;
-      } else {
-        const v =
-          viewMode === "actual"
-            ? r.embedded_tco2e_actual_only
-            : viewMode === "default"
-            ? r.embedded_tco2e_default_only
-            : r.embedded_tco2e_mixed;
-        m.embedded += Number(v || 0);
-      }
     }
-
     for (const [k, m] of map.entries()) {
       m.suppliers = supBy.get(k)?.size || 0;
       m.origins = originBy.get(k)?.size || 0;
-      if (viewMode === "compare") {
-        const a = Number(m.embedded_actual || 0);
-        const d = Number(m.embedded_default || 0);
-        m.embedded_delta = a - d;
-        m.embedded = a;
-      }
     }
-
-    return Array.from(map.values()).sort((a, b) => (viewMode === "compare" ? Number(b.embedded_actual || 0) - Number(a.embedded_actual || 0) : b.embedded - a.embedded));
+    return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
   }, [filtered, viewMode]);
 
-
-    const byOrigin = useMemo(() => {
-    type Agg = {
-      country_of_origin: string;
-      lines: number;
-      netMass: number;
-      suppliers: number;
-      cnCodes: number;
-      embedded: number;
-      embedded_actual?: number;
-      embedded_default?: number;
-      embedded_delta?: number;
-    };
-
-    const map = new Map<string, Agg>();
+  const byOrigin = useMemo(() => {
+    const map = new Map<string, { country_of_origin: string; lines: number; embedded: number; netMass: number; suppliers: number; cnCodes: number }>();
     const supBy = new Map<string, Set<string>>();
     const cnBy = new Map<string, Set<string>>();
-
     for (const r of filtered) {
       const key = String(r.country_of_origin || "-");
       if (!map.has(key)) {
-        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, cnCodes: 0, embedded_actual: 0, embedded_default: 0, embedded_delta: 0 });
+        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, cnCodes: 0 });
         supBy.set(key, new Set());
         cnBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
+            const v = viewMode === "actual"
+        ? r.embedded_tco2e_actual_only
+        : viewMode === "default"
+        ? r.embedded_tco2e_default_only
+        : r.embedded_tco2e_mixed;
+      m.embedded += Number(v || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
-
-      if (viewMode === "compare") {
-        const a = Number(r.embedded_tco2e_actual_only || 0);
-        const d = Number(r.embedded_tco2e_default_only || 0);
-        m.embedded_actual = (m.embedded_actual || 0) + a;
-        m.embedded_default = (m.embedded_default || 0) + d;
-      } else {
-        const v =
-          viewMode === "actual"
-            ? r.embedded_tco2e_actual_only
-            : viewMode === "default"
-            ? r.embedded_tco2e_default_only
-            : r.embedded_tco2e_mixed;
-        m.embedded += Number(v || 0);
-      }
     }
-
     for (const [k, m] of map.entries()) {
       m.suppliers = supBy.get(k)?.size || 0;
       m.cnCodes = cnBy.get(k)?.size || 0;
-      if (viewMode === "compare") {
-        const a = Number(m.embedded_actual || 0);
-        const d = Number(m.embedded_default || 0);
-        m.embedded_delta = a - d;
-        m.embedded = a;
-      }
     }
-
-    return Array.from(map.values()).sort((a, b) => (viewMode === "compare" ? Number(b.embedded_actual || 0) - Number(a.embedded_actual || 0) : b.embedded - a.embedded));
-  }, [filtered, viewMode]);
-
+    return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
+  }, [filtered]);
 
   useEffect(() => {
     let cancelled = false;
@@ -465,7 +364,7 @@ export default function ExposureDashboardPage() {
                   ))}
                 </select>
 
-                <select className="gsx-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as ViewMode)}>
+                <select className="gsx-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as any)}>
                   <option value="compare">View: Actual vs Default</option>
                   <option value="mixed">View: Mixed</option>
                   <option value="actual">View: Supplier actual</option>
@@ -524,15 +423,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>CN</th>
                         <th>Origins</th>
-                        {viewMode === "compare" ? (
-                          <>
-                            <th>Actual</th>
-                            <th>Default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          <th>Embedded tCO2e</th>
-                        )}
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -542,15 +433,7 @@ export default function ExposureDashboardPage() {
                           <td>{s.lines.toLocaleString()}</td>
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
-                          {viewMode === "compare" ? (
-                            <>
-                              <td>{fmtNum(s.embedded_actual, 2)}</td>
-                              <td>{fmtNum(s.embedded_default, 2)}</td>
-                              <td>{fmtNum(s.embedded_delta, 2)}</td>
-                            </>
-                          ) : (
-                            <td>{fmtNum(s.embedded, 2)}</td>
-                          )}
+                          <td>{fmtNum(s.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -569,15 +452,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        {viewMode === "compare" ? (
-                          <>
-                            <th>Actual</th>
-                            <th>Default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          <th>Embedded tCO2e</th>
-                        )}
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -587,15 +462,7 @@ export default function ExposureDashboardPage() {
                           <td>{c.lines.toLocaleString()}</td>
                           <td>{c.suppliers.toLocaleString()}</td>
                           <td>{c.origins.toLocaleString()}</td>
-                          {viewMode === "compare" ? (
-                            <>
-                              <td>{fmtNum(c.embedded_actual, 2)}</td>
-                              <td>{fmtNum(c.embedded_default, 2)}</td>
-                              <td>{fmtNum(c.embedded_delta, 2)}</td>
-                            </>
-                          ) : (
-                            <td>{fmtNum(c.embedded, 2)}</td>
-                          )}
+                          <td>{fmtNum(c.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -614,15 +481,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        {viewMode === "compare" ? (
-                          <>
-                            <th>Actual</th>
-                            <th>Default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          <th>Embedded tCO2e</th>
-                        )}
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -632,15 +491,7 @@ export default function ExposureDashboardPage() {
                           <td>{o.lines.toLocaleString()}</td>
                           <td>{o.suppliers.toLocaleString()}</td>
                           <td>{o.cnCodes.toLocaleString()}</td>
-                          {viewMode === "compare" ? (
-                            <>
-                              <td>{fmtNum(o.embedded_actual, 2)}</td>
-                              <td>{fmtNum(o.embedded_default, 2)}</td>
-                              <td>{fmtNum(o.embedded_delta, 2)}</td>
-                            </>
-                          ) : (
-                            <td>{fmtNum(o.embedded, 2)}</td>
-                          )}
+                          <td>{fmtNum(o.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -657,15 +508,7 @@ export default function ExposureDashboardPage() {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        {viewMode === "compare" ? (
-                          <>
-                            <th>Actual</th>
-                            <th>Default</th>
-                            <th>Δ</th>
-                          </>
-                        ) : (
-                          <th>Embedded tCO2e</th>
-                        )}
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -675,16 +518,8 @@ export default function ExposureDashboardPage() {
                           <td style={{ fontWeight: 900 }}>{r.supplier_name || "-"}</td>
                           <td>{r.cn_code || "-"}</td>
                           <td>{r.country_of_origin || "-"}</td>
-                          <td>{fmtNum(r.total_net_mass_kg, 0)}</td>
-                          {viewMode === "compare" ? (
-                            <>
-                              <td>{fmtNum(r.embedded_tco2e_actual_only, 2)}</td>
-                              <td>{fmtNum(r.embedded_tco2e_default_only, 2)}</td>
-                              <td>{fmtNum(Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0), 2)}</td>
-                            </>
-                          ) : (
-                            <td>{fmtNum(getRowEmbedded(r, viewMode), 2)}</td>
-                          )}
+                          <td>{fmtNum(r.total_net_mass_kg ?? null, 0)}</td>
+                          <td>{fmtNum((scenario === "actual" ? r.embedded_tco2e_actual_only : scenario === "default" ? r.embedded_tco2e_default_only : r.embedded_tco2e_mixed) ?? null, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
