@@ -26,6 +26,16 @@ type ExposureRow = {
   default_lines: number | null;
 };
 
+type ViewMode = "compare" | "mixed" | "actual" | "default";
+
+function pickEmbedded(row: ExposureRow, mode: ViewMode) {
+  if (mode === "mixed") return row.embedded_tco2e_mixed;
+  if (mode === "actual") return row.embedded_tco2e_actual_only;
+  if (mode === "default") return row.embedded_tco2e_default_only;
+  // compare mode: caller chooses explicit columns
+  return row.embedded_tco2e_mixed;
+}
+
 function fmtNum(n: number | null | undefined, dp = 2) {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return "-";
   const x = Number(n);
@@ -45,7 +55,7 @@ export default function ExposureDashboardPage() {
   const [rows, setRows] = useState<ExposureRow[]>([]);
   const [search, setSearch] = useState("");
   const [quarter, setQuarter] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"compare" | "mixed" | "actual" | "default">("compare");
+  const [viewMode, setViewMode] = useState<ViewMode>("compare");
 
   const quarterOptions = useMemo(() => {
     const uniq = new Set<string>();
@@ -86,35 +96,41 @@ export default function ExposureDashboardPage() {
     const actualLines = filtered.reduce((acc, r) => acc + Number(r.actual_lines || 0), 0);
     const defaultLines = filtered.reduce((acc, r) => acc + Number(r.default_lines || 0), 0);
 
-    const embedded =
-      viewMode === "actual" ? embeddedActual :
-      viewMode === "default" ? embeddedDefault :
-      viewMode === "mixed" ? embeddedMixed :
-      embeddedMixed;
+    const embedded = viewMode === "mixed" ? embeddedMixed : viewMode === "actual" ? embeddedActual : embeddedDefault;
 
     return { lineCount, embedded, embeddedActual, embeddedDefault, embeddedMixed, embeddedDelta, netMass, suppliers, cnCodes, origins, actualLines, defaultLines };
   }, [filtered, viewMode]);
 
 
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; netMass: number; cnCodes: number; origins: number }>();
+    const map = new Map<
+      string,
+      {
+        supplier_name: string;
+        lines: number;
+        embedded: number;
+        embeddedActual: number;
+        embeddedDefault: number;
+        netMass: number;
+        cnCodes: number;
+        origins: number;
+      }
+    >();
     const cnBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.supplier_name || "-");
       if (!map.has(key)) {
-        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0 });
+        map.set(key, { supplier_name: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, cnCodes: 0, origins: 0 });
         cnBy.set(key, new Set());
         originBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
-            const v = viewMode === "actual"
-        ? r.embedded_tco2e_actual_only
-        : viewMode === "default"
-        ? r.embedded_tco2e_default_only
-        : r.embedded_tco2e_mixed;
+      const v = pickEmbedded(r, viewMode);
       m.embedded += Number(v || 0);
+      m.embeddedActual += Number(r.embedded_tco2e_actual_only || 0);
+      m.embeddedDefault += Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -127,24 +143,34 @@ export default function ExposureDashboardPage() {
   }, [filtered, viewMode]);
 
   const byCnCode = useMemo(() => {
-    const map = new Map<string, { cn_code: string; lines: number; embedded: number; netMass: number; suppliers: number; origins: number }>();
+    const map = new Map<
+      string,
+      {
+        cn_code: string;
+        lines: number;
+        embedded: number;
+        embeddedActual: number;
+        embeddedDefault: number;
+        netMass: number;
+        suppliers: number;
+        origins: number;
+      }
+    >();
     const supBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.cn_code || "-");
       if (!map.has(key)) {
-        map.set(key, { cn_code: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, origins: 0 });
+        map.set(key, { cn_code: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, suppliers: 0, origins: 0 });
         supBy.set(key, new Set());
         originBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
-            const v = viewMode === "actual"
-        ? r.embedded_tco2e_actual_only
-        : viewMode === "default"
-        ? r.embedded_tco2e_default_only
-        : r.embedded_tco2e_mixed;
+      const v = pickEmbedded(r, viewMode);
       m.embedded += Number(v || 0);
+      m.embeddedActual += Number(r.embedded_tco2e_actual_only || 0);
+      m.embeddedDefault += Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -157,24 +183,34 @@ export default function ExposureDashboardPage() {
   }, [filtered, viewMode]);
 
   const byOrigin = useMemo(() => {
-    const map = new Map<string, { country_of_origin: string; lines: number; embedded: number; netMass: number; suppliers: number; cnCodes: number }>();
+    const map = new Map<
+      string,
+      {
+        country_of_origin: string;
+        lines: number;
+        embedded: number;
+        embeddedActual: number;
+        embeddedDefault: number;
+        netMass: number;
+        suppliers: number;
+        cnCodes: number;
+      }
+    >();
     const supBy = new Map<string, Set<string>>();
     const cnBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.country_of_origin || "-");
       if (!map.has(key)) {
-        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, netMass: 0, suppliers: 0, cnCodes: 0 });
+        map.set(key, { country_of_origin: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, suppliers: 0, cnCodes: 0 });
         supBy.set(key, new Set());
         cnBy.set(key, new Set());
       }
       const m = map.get(key)!;
       m.lines += 1;
-            const v = viewMode === "actual"
-        ? r.embedded_tco2e_actual_only
-        : viewMode === "default"
-        ? r.embedded_tco2e_default_only
-        : r.embedded_tco2e_mixed;
+      const v = pickEmbedded(r, viewMode);
       m.embedded += Number(v || 0);
+      m.embeddedActual += Number(r.embedded_tco2e_actual_only || 0);
+      m.embeddedDefault += Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
@@ -184,7 +220,7 @@ export default function ExposureDashboardPage() {
       m.cnCodes = cnBy.get(k)?.size || 0;
     }
     return Array.from(map.values()).sort((a, b) => b.embedded - a.embedded);
-  }, [filtered]);
+  }, [filtered, viewMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -423,7 +459,15 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>CN</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Embedded tCO2e (Actual)</th>
+                            <th>Embedded tCO2e (Default)</th>
+                            <th>Δ tCO2e</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -433,7 +477,15 @@ export default function ExposureDashboardPage() {
                           <td>{s.lines.toLocaleString()}</td>
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
-                          <td>{fmtNum(s.embedded, 2)}</td>
+                          {viewMode === "compare" ? (
+                            <>
+                              <td>{fmtNum(s.embeddedActual, 2)}</td>
+                              <td>{fmtNum(s.embeddedDefault, 2)}</td>
+                              <td>{fmtNum(s.embeddedActual - s.embeddedDefault, 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(s.embedded, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -452,7 +504,15 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Embedded tCO2e (Actual)</th>
+                            <th>Embedded tCO2e (Default)</th>
+                            <th>Δ tCO2e</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -462,7 +522,15 @@ export default function ExposureDashboardPage() {
                           <td>{c.lines.toLocaleString()}</td>
                           <td>{c.suppliers.toLocaleString()}</td>
                           <td>{c.origins.toLocaleString()}</td>
-                          <td>{fmtNum(c.embedded, 2)}</td>
+                          {viewMode === "compare" ? (
+                            <>
+                              <td>{fmtNum(c.embeddedActual, 2)}</td>
+                              <td>{fmtNum(c.embeddedDefault, 2)}</td>
+                              <td>{fmtNum(c.embeddedActual - c.embeddedDefault, 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(c.embedded, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -481,7 +549,15 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Embedded tCO2e (Actual)</th>
+                            <th>Embedded tCO2e (Default)</th>
+                            <th>Δ tCO2e</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -491,7 +567,15 @@ export default function ExposureDashboardPage() {
                           <td>{o.lines.toLocaleString()}</td>
                           <td>{o.suppliers.toLocaleString()}</td>
                           <td>{o.cnCodes.toLocaleString()}</td>
-                          <td>{fmtNum(o.embedded, 2)}</td>
+                          {viewMode === "compare" ? (
+                            <>
+                              <td>{fmtNum(o.embeddedActual, 2)}</td>
+                              <td>{fmtNum(o.embeddedDefault, 2)}</td>
+                              <td>{fmtNum(o.embeddedActual - o.embeddedDefault, 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(o.embedded, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -508,7 +592,15 @@ export default function ExposureDashboardPage() {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        <th>Embedded tCO2e</th>
+                        {viewMode === "compare" ? (
+                          <>
+                            <th>Embedded tCO2e (Actual)</th>
+                            <th>Embedded tCO2e (Default)</th>
+                            <th>Δ tCO2e</th>
+                          </>
+                        ) : (
+                          <th>Embedded tCO2e</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -519,7 +611,15 @@ export default function ExposureDashboardPage() {
                           <td>{r.cn_code || "-"}</td>
                           <td>{r.country_of_origin || "-"}</td>
                           <td>{fmtNum(r.total_net_mass_kg ?? null, 0)}</td>
-                          <td>{fmtNum((viewMode === "actual" ? r.embedded_tco2e_actual_only : viewMode === "default" ? r.embedded_tco2e_default_only : r.embedded_tco2e_mixed) ?? null, 2)}</td>
+                          {viewMode === "compare" ? (
+                            <>
+                              <td>{fmtNum(r.embedded_tco2e_actual_only ?? null, 2)}</td>
+                              <td>{fmtNum(r.embedded_tco2e_default_only ?? null, 2)}</td>
+                              <td>{fmtNum(Number(r.embedded_tco2e_actual_only || 0) - Number(r.embedded_tco2e_default_only || 0), 2)}</td>
+                            </>
+                          ) : (
+                            <td>{fmtNum(pickEmbedded(r, viewMode) ?? null, 2)}</td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
