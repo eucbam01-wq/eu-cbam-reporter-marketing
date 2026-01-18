@@ -519,7 +519,7 @@ export default function ExposureDashboardPage() {
                           <td>{r.cn_code || "-"}</td>
                           <td>{r.country_of_origin || "-"}</td>
                           <td>{fmtNum(r.total_net_mass_kg ?? null, 0)}</td>
-                          <td>{fmtNum((scenario === "actual" ? r.embedded_tco2e_actual_only : scenario === "default" ? r.embedded_tco2e_default_only : r.embedded_tco2e_mixed) ?? null, 2)}</td>
+                          <td>{fmtNum((viewMode === "actual" ? r.embedded_tco2e_actual_only : viewMode === "default" ? r.embedded_tco2e_default_only : r.embedded_tco2e_mixed) ?? null, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
