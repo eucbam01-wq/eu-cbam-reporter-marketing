@@ -902,6 +902,9 @@ export default function AppPage() {
               <a className="gsx-linkBtn" href="/importer/audit">
                 Audit submissions
               </a>
+              <a className="gsx-linkBtn" href="/importer/exposure-dashboard">
+                Exposure dashboard
+              </a>
             </div>
           </section>
 
