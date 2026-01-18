@@ -90,13 +90,13 @@ export default function ExposureDashboardPage() {
   }, [filtered, scenario]);
 
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; netMass: number; cnCodes: number; origins: number }>();
+    const map = new Map<string, { supplier_name: string; lines: number; embedded: number; embeddedActual: number; embeddedDefault: number; netMass: number; cnCodes: number; origins: number }>();
     const cnBy = new Map<string, Set<string>>();
     const originBy = new Map<string, Set<string>>();
     for (const r of filtered) {
       const key = String(r.supplier_name || "-");
       if (!map.has(key)) {
-        map.set(key, { supplier_name: key, lines: 0, embedded: 0, netMass: 0, cnCodes: 0, origins: 0 });
+        map.set(key, { supplier_name: key, lines: 0, embedded: 0, embeddedActual: 0, embeddedDefault: 0, netMass: 0, cnCodes: 0, origins: 0 });
         cnBy.set(key, new Set());
         originBy.set(key, new Set());
       }
@@ -108,8 +108,6 @@ export default function ExposureDashboardPage() {
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
-      m.embeddedActual = (m.embeddedActual || 0) + Number(r.embedded_tco2e_actual_only || 0);
-      m.embeddedDefault = (m.embeddedDefault || 0) + Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -140,8 +138,6 @@ export default function ExposureDashboardPage() {
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
-      m.embeddedActual = (m.embeddedActual || 0) + Number(r.embedded_tco2e_actual_only || 0);
-      m.embeddedDefault = (m.embeddedDefault || 0) + Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.country_of_origin) originBy.get(key)!.add(String(r.country_of_origin));
@@ -172,8 +168,6 @@ export default function ExposureDashboardPage() {
         ? r.embedded_tco2e_default_only
         : r.embedded_tco2e_mixed;
       m.embedded += Number(v || 0);
-      m.embeddedActual = (m.embeddedActual || 0) + Number(r.embedded_tco2e_actual_only || 0);
-      m.embeddedDefault = (m.embeddedDefault || 0) + Number(r.embedded_tco2e_default_only || 0);
       m.netMass += Number(r.total_net_mass_kg || 0);
       if (r.supplier_name) supBy.get(key)!.add(String(r.supplier_name));
       if (r.cn_code) cnBy.get(key)!.add(String(r.cn_code));
@@ -402,7 +396,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>CN</th>
                         <th>Origins</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -412,7 +406,7 @@ export default function ExposureDashboardPage() {
                           <td>{s.lines.toLocaleString()}</td>
                           <td>{s.cnCodes.toLocaleString()}</td>
                           <td>{s.origins.toLocaleString()}</td>
-                          <td>{fmtNum(s.embeddedActual,2)}</td><td>{fmtNum(s.embeddedDefault,2)}</td><td>{fmtNum(s.embeddedActual - s.embeddedDefault,2)}</td>
+                          <td>{fmtNum(s.embedded, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -431,7 +425,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>Origins</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -460,7 +454,7 @@ export default function ExposureDashboardPage() {
                         <th>Lines</th>
                         <th>Suppliers</th>
                         <th>CN</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -487,7 +481,7 @@ export default function ExposureDashboardPage() {
                         <th>CN</th>
                         <th>Origin</th>
                         <th>Net mass kg</th>
-                        <th>Actual</th><th>Default</th><th>Δ</th>
+                        <th>Embedded tCO2e</th>
                       </tr>
                     </thead>
                     <tbody>
