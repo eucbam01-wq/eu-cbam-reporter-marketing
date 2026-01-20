@@ -99,14 +99,12 @@ const SAMPLE_ROWS: GridRow[] = [
 
 
 function getPlanTier(): string {
-  const mod: any = Entitlements as any;
   try {
-    if (typeof mod.getPlanTier === 'function') return (mod.getPlanTier() || 'free').toString().trim().toLowerCase();
-  } catch {
-    // ignore
-  }
-  const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || "free").toString().trim().toLowerCase();
-  return raw || "free";
+    const mod: any = Entitlements as any;
+    if (typeof mod.getPlanTier === 'function') return (mod.getPlanTier() || 'free').toString();
+  } catch {}
+  const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || 'free').toString().trim().toLowerCase();
+  return raw || 'free';
 }
 
 type AnyEntitlements = Record<string, any>;
@@ -198,40 +196,21 @@ export default function AppPage() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [search, setSearch] = useState("");
   const router = useRouter();
+
   const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
 
   useEffect(() => {
     if (!router.isReady) return;
-    const checkout = router.query.checkout;
-    const sessionId = router.query.session_id;
-    if (checkout !== 'success') return;
-    if (typeof sessionId !== 'string' || !sessionId) return;
-
-    let cancelled = false;
-    (async () => {
+    const q: any = router.query || {};
+    const checkout = (q.checkout || '').toString();
+    const sessionId = (q.session_id || '').toString();
+    if (checkout === 'success' && sessionId) {
       try {
-        const resp = await fetch(`/api/stripe/entitlement?session_id=${encodeURIComponent(sessionId)}`);
-        if (!resp.ok) return;
-        const data: any = await resp.json();
-        if (cancelled) return;
-        if (data?.entitled) {
-          const plan = (data?.plan || 'pro').toString().trim().toLowerCase();
-          try {
-            window.localStorage.setItem('gsx-plan-tier', plan);
-          } catch {
-            // ignore
-          }
-          window.location.replace('/app');
-        }
-      } catch {
-        // ignore
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router.isReady, router.query.checkout, router.query.session_id]);
+        (Entitlements as any).setPlanTier?.('pro');
+      } catch {}
+      window.location.replace('/app');
+    }
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     try {
