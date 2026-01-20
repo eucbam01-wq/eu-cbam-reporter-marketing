@@ -1,7 +1,9 @@
 ﻿// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\app.tsx
 import Head from "next/head";
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import { createClient } from "@supabase/supabase-js";
+import * as Entitlements from "../src/entitlements";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -95,6 +97,92 @@ const SAMPLE_ROWS: GridRow[] = [
   },
 ];
 
+
+function getPlanTier(): string {
+  const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || "free").toString().trim().toLowerCase();
+  return raw || "free";
+}
+
+type AnyEntitlements = Record<string, any>;
+
+function resolveEntitlements(planTier: string): AnyEntitlements {
+  const mod: any = Entitlements as any;
+  try {
+    if (typeof mod.getEntitlements === "function") return mod.getEntitlements(planTier) || {};
+    if (typeof mod.getEntitlementsForPlan === "function") return mod.getEntitlementsForPlan(planTier) || {};
+    if (typeof mod.entitlementsForPlan === "function") return mod.entitlementsForPlan(planTier) || {};
+    if (mod.ENTITLEMENTS_BY_PLAN && mod.ENTITLEMENTS_BY_PLAN[planTier]) return mod.ENTITLEMENTS_BY_PLAN[planTier] || {};
+    if (mod.entitlementsByPlan && mod.entitlementsByPlan[planTier]) return mod.entitlementsByPlan[planTier] || {};
+    if (mod.entitlements && mod.entitlements[planTier]) return mod.entitlements[planTier] || {};
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function canAccessFeature(planTier: string, ent: AnyEntitlements, featureKey: string): boolean {
+  const mod: any = Entitlements as any;
+  try {
+    if (typeof mod.canAccess === "function") return !!mod.canAccess(planTier, featureKey);
+    if (typeof mod.isEntitled === "function") return !!mod.isEntitled(planTier, featureKey);
+    if (typeof mod.hasEntitlement === "function") return !!mod.hasEntitlement(planTier, featureKey);
+  } catch {
+    // ignore
+  }
+
+  if (typeof (ent as any)?.[featureKey] === "boolean") return !!(ent as any)[featureKey];
+  if (typeof (ent as any)?.features?.[featureKey] === "boolean") return !!(ent as any).features[featureKey];
+  if (typeof (ent as any)?.ui?.[featureKey] === "boolean") return !!(ent as any).ui[featureKey];
+
+  // Safe default: only treat known core features as open.
+  const CORE_OPEN = new Set<string>(["command_center", "reporting", "suppliers", "import_uploads", "entities", "users", "settings"]);
+  if (CORE_OPEN.has(featureKey)) return true;
+
+  // If we cannot resolve the entitlement, treat it as locked for free tier.
+  return planTier !== "free";
+}
+
+type GatedLinkProps = {
+  href: string;
+  featureKey: string;
+  className: string;
+  children: React.ReactNode;
+  title?: string;
+};
+
+function GatedLink({ href, featureKey, className, children, title }: GatedLinkProps) {
+  const planTier = getPlanTier();
+  const ent = resolveEntitlements(planTier);
+  const allowed = canAccessFeature(planTier, ent, featureKey);
+
+  if (allowed) {
+    return (
+      <a className={className} href={href} title={title}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <a
+      className={`${className} gsx-lockedLink`}
+      href={href}
+      aria-disabled="true"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      title={title || "Locked: upgrade required"}
+    >
+      <span className="gsx-lockIcon" aria-hidden="true">
+        🔒
+      </span>
+      {children}
+      <span className="gsx-lockedHint">Locked</span>
+    </a>
+  );
+}
+
 export default function AppPage() {
   const supabase = useMemo(() => getSupabase(), []);
   const [loading, setLoading] = useState(true);
@@ -103,6 +191,8 @@ export default function AppPage() {
 
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [search, setSearch] = useState("");
+  const router = useRouter();
+  const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
 
   useEffect(() => {
     try {
@@ -633,6 +723,36 @@ export default function AppPage() {
           border-color: var(--borderStrong);
         }
 
+        .gsx-lockedLink{
+          opacity: .55;
+          cursor: not-allowed;
+          pointer-events: auto;
+        }
+
+        .gsx-lockedLink:hover{
+          border-color: var(--border);
+          filter: none;
+        }
+
+        .gsx-lockIcon{
+          font-size: 12px;
+          margin-right: 6px;
+        }
+
+        .gsx-lockedHint{
+          margin-left: 8px;
+          font-size: 11px;
+          font-weight: 950;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+          padding: 4px 8px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          background: rgba(255,255,255,.02);
+          color: var(--muted);
+          white-space: nowrap;
+        }
+
         .gsx-gridPanel{
           border: 1px solid var(--border);
           border-radius: 12px;
@@ -798,30 +918,14 @@ export default function AppPage() {
           </div>
 
           <nav className="gsx-nav">
-            <a className="gsx-navItem gsx-navItemActive" href="/app" aria-current="page">
-              <span>Command Center</span>
-            </a>
-            <a className="gsx-navItem" href="/importer/emissions-review">
-              <span>Reporting</span>
-            </a>
-            <a className="gsx-navItem" href="/importer/exposure-dashboard">
-              <span>Exposure dashboard</span>
-            </a>
-            <a className="gsx-navItem" href="/importer/supplier-links">
-              <span>Suppliers</span>
-            </a>
-            <a className="gsx-navItem" href="/imports/upload">
-              <span>Import uploads</span>
-            </a>
-            <a className="gsx-navItem" href="/importer/entities">
-              <span>Entities</span>
-            </a>
-            <a className="gsx-navItem" href="/importer/users">
-              <span>Users</span>
-            </a>
-            <a className="gsx-navItem" href="/app#settings">
-              <span>Settings</span>
-            </a>
+            <GatedLink className={`gsx-navItem ${isActive("/app") ? "gsx-navItemActive" : ""}`} href="/app" featureKey="command_center" title="Command Center"><span>Command Center</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/emissions-review") ? "gsx-navItemActive" : ""}`} href="/importer/emissions-review" featureKey="reporting" title="Reporting"><span>Reporting</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/exposure-dashboard") ? "gsx-navItemActive" : ""}`} href="/importer/exposure-dashboard" featureKey="exposure_dashboard" title="Exposure dashboard"><span>Exposure dashboard</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/supplier-links") ? "gsx-navItemActive" : ""}`} href="/importer/supplier-links" featureKey="suppliers" title="Suppliers"><span>Suppliers</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/imports/upload") ? "gsx-navItemActive" : ""}`} href="/imports/upload" featureKey="import_uploads" title="Import uploads"><span>Import uploads</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/entities") ? "gsx-navItemActive" : ""}`} href="/importer/entities" featureKey="entities" title="Entities"><span>Entities</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/users") ? "gsx-navItemActive" : ""}`} href="/importer/users" featureKey="users" title="Users"><span>Users</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${router.asPath.startsWith("/app#settings") ? "gsx-navItemActive" : ""}`} href="/app#settings" featureKey="settings" title="Settings"><span>Settings</span></GatedLink>
           </nav>
         </aside>
 
@@ -890,21 +994,11 @@ export default function AppPage() {
             </div>
 
             <div className="gsx-actionsRight">
-              <a className="gsx-cta" href="/importer/create-link">
-                Generate Magic Link
-              </a>
-              <a className="gsx-linkBtn" href="/importer/supplier-links">
-                Supplier links
-              </a>
-              <a className="gsx-linkBtn" href="/imports/upload">
-                Import upload
-              </a>
-              <a className="gsx-linkBtn" href="/importer/audit">
-                Audit submissions
-              </a>
-              <a className="gsx-linkBtn" href="/importer/exposure-dashboard">
-                Exposure dashboard
-              </a>
+              <GatedLink className="gsx-cta" href="/importer/create-link" featureKey="suppliers" title="Generate Magic Link">Generate Magic Link</GatedLink>
+              <GatedLink className="gsx-linkBtn" href="/importer/supplier-links" featureKey="suppliers" title="Supplier links">Supplier links</GatedLink>
+              <GatedLink className="gsx-linkBtn" href="/imports/upload" featureKey="import_uploads" title="Import upload">Import upload</GatedLink>
+              <GatedLink className="gsx-linkBtn" href="/importer/audit" featureKey="audit" title="Audit submissions">Audit submissions</GatedLink>
+              <GatedLink className="gsx-linkBtn" href="/importer/exposure-dashboard" featureKey="exposure_dashboard" title="Exposure dashboard">Exposure dashboard</GatedLink>
             </div>
           </section>
 
