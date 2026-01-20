@@ -27,11 +27,11 @@ type GridRow = {
 };
 
 function formatEUR(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "â‚¬--";
+  if (value === null || value === undefined || Number.isNaN(value)) return "€--";
   try {
     return new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
   } catch {
-    return `â‚¬${Math.round(value).toString()}`;
+    return `€${Math.round(value).toString()}`;
   }
 }
 
@@ -44,12 +44,35 @@ function formatNumber(value: number | null | undefined, maxFractionDigits = 2) {
   }
 }
 
+function renderFlag(flag: string): string {
+  if (!flag) return "";
+  try {
+    const needsFix = flag.includes("ð") || flag.includes("Ã");
+    if (!needsFix) return flag;
+    if (typeof TextDecoder === "undefined") return flag;
+    const bytes = new Uint8Array(Array.from(flag).map((c) => c.charCodeAt(0)));
+    const decoded = new TextDecoder("utf-8").decode(bytes);
+    return decoded || flag;
+  } catch {
+    return flag;
+  }
+}
+
+function planLabel(tier: string): string {
+  const t = (tier || "free").toString().trim().toLowerCase();
+  if (t === "pro") return "Pro";
+  if (t === "enterprise") return "Enterprise";
+  if (t === "starter") return "Starter";
+  if (t === "free") return "Free";
+  return "Unknown";
+}
+
 const SAMPLE_ROWS: GridRow[] = [
   {
     shipmentId: "GS-IMP-000481",
     cnCode: "7318",
     assetLabel: "Steel Fasteners",
-    originFlag: "ðŸ‡¹ðŸ‡·",
+    originFlag: "🇹🇷",
     originName: "Turkey",
     netWeightTonnes: 12.4,
     emissionsTco2e: 28.9,
@@ -59,7 +82,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000482",
     cnCode: "7604",
     assetLabel: "Aluminium Bars and Rods",
-    originFlag: "ðŸ‡³ðŸ‡´",
+    originFlag: "🇳🇴",
     originName: "Norway",
     netWeightTonnes: 8.1,
     emissionsTco2e: 10.2,
@@ -69,7 +92,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000483",
     cnCode: "7208",
     assetLabel: "Hot Rolled Steel",
-    originFlag: "ðŸ‡®ðŸ‡³",
+    originFlag: "🇮🇳",
     originName: "India",
     netWeightTonnes: 26.7,
     emissionsTco2e: 74.3,
@@ -79,7 +102,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000484",
     cnCode: "2818",
     assetLabel: "Aluminium Oxide",
-    originFlag: "ðŸ‡²ðŸ‡¦",
+    originFlag: "🇲🇦",
     originName: "Morocco",
     netWeightTonnes: 5.0,
     emissionsTco2e: 6.6,
@@ -89,7 +112,7 @@ const SAMPLE_ROWS: GridRow[] = [
     shipmentId: "GS-IMP-000485",
     cnCode: "3102",
     assetLabel: "Nitrogen Fertiliser",
-    originFlag: "ðŸ‡ªðŸ‡¬",
+    originFlag: "🇪🇬",
     originName: "Egypt",
     netWeightTonnes: 14.9,
     emissionsTco2e: 22.4,
@@ -99,6 +122,12 @@ const SAMPLE_ROWS: GridRow[] = [
 
 
 function getPlanTier(): string {
+  const mod: any = Entitlements as any;
+  try {
+    if (typeof mod.getPlanTier === 'function') return (mod.getPlanTier() || 'free').toString().trim().toLowerCase();
+  } catch {
+    // ignore
+  }
   const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || "free").toString().trim().toLowerCase();
   return raw || "free";
 }
@@ -125,7 +154,6 @@ function canAccessFeature(planTier: string, ent: AnyEntitlements, featureKey: st
   try {
     if (typeof mod.canAccess === "function") return !!mod.canAccess(planTier, featureKey);
     if (typeof mod.isEntitled === "function") return !!mod.isEntitled(planTier, featureKey);
-    if (typeof mod.hasEntitlement === "function") return !!mod.hasEntitlement(planTier, featureKey);
   } catch {
     // ignore
   }
@@ -192,36 +220,42 @@ export default function AppPage() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [search, setSearch] = useState("");
   const router = useRouter();
-  
-// Stripe return: force entitlement refresh and remove query params.
-useEffect(() => {
-  const q: any = router.query || {};
-  const checkout = (q.checkout || '').toString();
-  const sessionId = (q.session_id || '').toString();
+  const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
 
-  if (checkout === 'success' && sessionId) {
+  const planTier = getPlanTier();
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const checkout = router.query.checkout;
+    const sessionId = router.query.session_id;
+    if (checkout !== 'success') return;
+    if (typeof sessionId !== 'string' || !sessionId) return;
+
+    let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`/api/stripe/entitlement?session_id=${encodeURIComponent(sessionId)}`, {
-          method: 'GET',
-          credentials: 'same-origin',
-          headers: { 'Accept': 'application/json' },
-        });
-        const j = await r.json().catch(() => ({} as any));
-        const tier = (j?.tier || '').toString().toLowerCase();
-        if (tier === 'pro' || tier === 'enterprise' || tier === 'starter') {
-          Entitlements.setPlanTier(tier as any);
+        const resp = await fetch(`/api/stripe/entitlement?session_id=${encodeURIComponent(sessionId)}`);
+        if (!resp.ok) return;
+        const data: any = await resp.json();
+        if (cancelled) return;
+        if (data?.entitled) {
+          const plan = (data?.plan || 'pro').toString().trim().toLowerCase();
+          try {
+            window.localStorage.setItem('gsx-plan-tier', plan);
+          } catch {
+            // ignore
+          }
+          window.location.replace('/app');
         }
       } catch {
         // ignore
-      } finally {
-        // Full page load to apply gating; strip params.
-        window.location.replace('/app');
       }
     })();
-  }
-}, [router.isReady]);
-const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.checkout, router.query.session_id]);
 
   useEffect(() => {
     try {
@@ -967,6 +1001,7 @@ const isActive = (href: string) => router.asPath === href || router.asPath.start
 
             <div className="gsx-topBarRight">
               {user?.email ? <span className="gsx-pill">{user.email}</span> : null}
+              <span className="gsx-pill">Plan: {planLabel(planTier)}</span>
               <button className="gsx-btn" type="button" onClick={toggleTheme} aria-label="Toggle theme">
                 Theme: {theme === "dark" ? "Dark" : "Light"}
               </button>
@@ -1081,7 +1116,7 @@ const isActive = (href: string) => router.asPath === href || router.asPath.start
                       <td className="gsx-td">
                         <div className="gsx-origin" title={r.originName}>
                           <span className="gsx-flag" aria-hidden="true">
-                            {r.originFlag}
+                            {renderFlag(r.originFlag)}
                           </span>
                           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{r.originName}</span>
                         </div>
