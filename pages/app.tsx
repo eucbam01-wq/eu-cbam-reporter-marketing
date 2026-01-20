@@ -99,12 +99,9 @@ const SAMPLE_ROWS: GridRow[] = [
 
 
 function getPlanTier(): string {
+  const mod: any = Entitlements as any;
   try {
-    const mod: any = Entitlements as any;
-    if (typeof mod.getEffectivePlanTier === 'function') {
-      const t = (mod.getEffectivePlanTier() || 'free').toString().trim().toLowerCase();
-      return t || 'free';
-    }
+    if (typeof mod.getPlanTier === 'function') return (mod.getPlanTier() || 'free').toString().trim().toLowerCase();
   } catch {
     // ignore
   }
@@ -205,23 +202,36 @@ export default function AppPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    const q: any = router.query || {};
-    const checkout = (q.checkout || '').toString();
-    const sessionId = (q.session_id || '').toString();
-    if (checkout === 'success') {
+    const checkout = router.query.checkout;
+    const sessionId = router.query.session_id;
+    if (checkout !== 'success') return;
+    if (typeof sessionId !== 'string' || !sessionId) return;
+
+    let cancelled = false;
+    (async () => {
       try {
-        // Frontend-only entitlement refresh: mark this browser as Pro after successful checkout.
-        (Entitlements as any)?.setPlanTierOverride?.('pro');
-        if (sessionId) {
-          window.localStorage.setItem('gsx-last-checkout-session', sessionId);
+        const resp = await fetch(`/api/stripe/entitlement?session_id=${encodeURIComponent(sessionId)}`);
+        if (!resp.ok) return;
+        const data: any = await resp.json();
+        if (cancelled) return;
+        if (data?.entitled) {
+          const plan = (data?.plan || 'pro').toString().trim().toLowerCase();
+          try {
+            window.localStorage.setItem('gsx-plan-tier', plan);
+          } catch {
+            // ignore
+          }
+          window.location.replace('/app');
         }
       } catch {
         // ignore
       }
-      // Force a clean URL + full reload so gating reads the updated tier.
-      window.location.replace('/app');
-    }
-  }, [router.isReady, router.query]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.checkout, router.query.session_id]);
 
   useEffect(() => {
     try {
