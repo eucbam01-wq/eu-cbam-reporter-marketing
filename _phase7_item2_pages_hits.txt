@@ -1,0 +1,109 @@
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\auth\confirm.tsx; LineNumber=37; Line=          setMessage("Email confirmed. Redirecting to dashboard...");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\auth\reset.tsx; LineNumber=213; Line=        <p className="gsx-sub">Set a new password for your importer account.</p>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\ai.json.tsx; LineNumber=44; Line=                'The Carbon Border Adjustment Mechanism is the EU policy tool that puts a fair price on carbon embedded in certain imported goods. During the transitional phase, importers report embedded emissions for covered goods.'}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\index.tsx; LineNumber=75; Line=                  Built for importers, freight forwarders, and indirect representatives shipping into the EU.}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\index.tsx; LineNumber=278; Line=              <p className="gsx-sub">Designed for EU import operations: importers, freight forwarders, and indirect representatives across the EU.</p>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\index.tsx; LineNumber=283; Line=                <h3 className="gsx-cardTitle">For importers</h3>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\index.tsx; LineNumber=315; Line=                CBAM initially applies to cement, iron and steel, aluminium, fertilisers, electricity, and hydrogen. Importers must report embedded emissions during the transitional phase.}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\index.tsx; LineNumber=424; Line=                  The Carbon Border Adjustment Mechanism is the EU policy tool that puts a fair price on carbon embedded in certain imported goods. During the transitional phase, importers report embedded emissions for covered goods.}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\en\index.tsx; LineNumber=563; Line=            "The Carbon Border Adjustment Mechanism is the EU policy tool that puts a fair price on carbon embedded in certain imported goods. During the transitional phase, importers report embedded emissions for covered goods.",}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\audit.tsx; LineNumber=1; Line=// FILE: marketing/pages/importer/audit.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\audit.tsx; LineNumber=33; Line=export default function ImporterAuditPage() {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\audit.tsx; LineNumber=53; Line=        const { data, error: err } = await supabase.rpc("list_supplier_submissions_for_importer", {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\audit.tsx; LineNumber=228; Line=// FILE: marketing/pages/importer/audit.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx; LineNumber=1; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx; LineNumber=56; Line=export default function ImporterCampaignsPage() {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx; LineNumber=93; Line=      const { data: reqData, error: reqErr } = await supabase.rpc("list_supplier_requests_for_importer");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx; LineNumber=209; Line=      void navigator.clipboard.writeText(v);}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx; LineNumber=390; Line=            <a className="gsx-btn" href="/importer/supplier-links">}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx; LineNumber=621; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\campaigns.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=1; Line=// FILE: marketing/pages/importer/certificates.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=31; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=63; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=79; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=99; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=239; Line=      if (r.importer_org_id) s.add(String(r.importer_org_id));}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=255; Line=      if (orgId && String(r.importer_org_id) !== orgId) continue;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=327; Line=          .select("id, importer_org_id, created_at, quarter_year")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=341; Line=          .filter((x) => x && x.id && x.importer_org_id)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=347; Line=            importer_org_id: String(x.importer_org_id),}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=365; Line=        const defaultOrg = mapped[0]?.importer_org_id || "";}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=457; Line=          .select("report_id, importer_org_id, certificates_required, certificates_purchased, certificates_gap")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=473; Line=          .select("importer_org_id, year, certificates_required, certificates_purchased, net_for_year, cumulative_balance, carryover_available")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=475; Line=          .eq("importer_org_id", orgId)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=487; Line=          .select("id, importer_org_id, purchase_date, year, certificates_purchased, unit_price_eur, notes, created_at")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=489; Line=          .eq("importer_org_id", orgId)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=553; Line=      setSaveErr("Missing importer_org_id");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=611; Line=        importer_org_id: orgId,}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=641; Line=        .select("id, importer_org_id, purchase_date, year, certificates_purchased, unit_price_eur, notes, created_at")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=643; Line=        .eq("importer_org_id", orgId)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=1013; Line=            <Link className="gsx-link" href="/importer/exposure-dashboard">Exposure dashboard</Link>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\certificates.tsx; LineNumber=1465; Line=// FILE: marketing/pages/importer/certificates.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx; LineNumber=1; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx; LineNumber=59; Line=              supabase.rpc("list_report_items_for_importer"),}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx; LineNumber=60; Line=              supabase.rpc("list_suppliers_for_importer"),}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx; LineNumber=127; Line=          <Link href="/importer/supplier-links">Supplier links</Link>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx; LineNumber=196; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\create-link.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=1; Line=// FILE: marketing/pages/importer/emissions-review.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=16; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=24; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=32; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=46; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=238; Line=          .select("id, importer_org_id, quarter_year, status, created_at")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=244; Line=          const org = String(r.importer_org_id || "");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=254; Line=        const { data: imports, error: iErr } = await supabase.from("imports").select("id, importer_org_id, import_ref, import_date");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=262; Line=            importer_org_id: im.importer_org_id,}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=271; Line=            "id, import_id, importer_org_id, product_sku, cn_code, quantity, net_mass_kg, customs_value_eur, country_of_origin, procedure_code, supplier_id, supplier_portal_submission_id"}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=280; Line=          const { data: suppliersData, error: sErr } = await supabase.from("suppliers").select("id, importer_org_id, name").in("id", supplierIds);}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=283; Line=            suppliersMap.set(s.id, { id: s.id, importer_org_id: s.importer_org_id, name: s.name });}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=316; Line=          const isLockedQuarter = Boolean(imp?.importer_org_id && quarterYear && lockedQuarterByOrg.get(String(imp.importer_org_id))?.has(quarterYear));}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=323; Line=              importer_org_id: l.importer_org_id,}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=603; Line=                Locked is derived from presence of a non-draft report for the same importer org and quarter. Data source is derived from supplier_portal_submissions.payload.}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\emissions-review.tsx; LineNumber=612; Line=// FILE: marketing/pages/importer/emissions-review.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=1; Line=// FILE: marketing/pages/importer/exposure-dashboard.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=49; Line=export default function ExposureDashboardPage() {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=273; Line=          setError(ex?.message ?? "Failed to load exposure dashboard.");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=288; Line=        <title>GrandScope | Exposure Dashboard</title>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=380; Line=          <h1 className="gsx-title">Exposure dashboard</h1>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=383; Line=            <Link className="gsx-link" href="/importer/certificates">Certificates</Link>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\exposure-dashboard.tsx; LineNumber=639; Line=// FILE: marketing/pages/importer/exposure-dashboard.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=1; Line=// FILE: marketing/pages/importer/forecast.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=17; Line=  importer_org_id: string;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=67; Line=    for (const r of reports) if (r.importer_org_id) s.add(String(r.importer_org_id));}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=83; Line=      if (orgId && String(r.importer_org_id) !== orgId) continue;}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=109; Line=          .select("id, importer_org_id, created_at, quarter_year")}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=116; Line=          .filter((x) => x && x.id && x.importer_org_id)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=119; Line=            importer_org_id: String(x.importer_org_id),}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=127; Line=        const defaultOrg = mapped[0]?.importer_org_id || "";}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=313; Line=            <Link className="gsx-link" href="/importer/certificates">}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=382; Line=      {/* FILE: marketing/pages/importer/forecast.tsx (repo: eu-cbam-reporter/marketing) */}}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\forecast.tsx; LineNumber=387; Line=// FILE: marketing/pages/importer/forecast.tsx (repo: eu-cbam-reporter/marketing)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=1; Line=// File: pages/importer/index.tsx (C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=15; Line=      href={locked ? '/importer' : props.href}}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=37; Line=export default function ImporterIndexPage() {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=41; Line=        <h1 className="text-2xl font-semibold">Importer</h1>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=45; Line=          <ActionButton label="Create report" href="/importer/reports/new" entitlementKey="action.create_report" />}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=46; Line=          <ActionButton label="Export (CSV/XML)" href="/importer/exports" entitlementKey="action.export" />}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=47; Line=          <ActionButton label="Upload certificate" href="/importer/certificates" entitlementKey="action.upload_certificate" />}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=48; Line=          <ActionButton label="Manage suppliers" href="/importer/suppliers" entitlementKey="action.manage_suppliers" />}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx; LineNumber=60; Line=// File: pages/importer/index.tsx (C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\index.tsx)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=1; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=72; Line=export default function ImporterSupplierLinksPage() {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=96; Line=        const { data, error } = await supabase.rpc("list_supplier_requests_for_importer");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=147; Line=      void navigator.clipboard.writeText(v);}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=154; Line=    <div className="gsx-importerRoot">}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=161; Line=        .gsx-importerRoot {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=351; Line=            <a className="gsx-btn" href="/importer/create-link">}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx; LineNumber=499; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\supplier-links.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=1; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=18; Line=export default function ImporterUsersPage() {}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=58; Line=        const importerOnly = list.filter((o) => o.type === "importer");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=61; Line=          setOrgs(importerOnly);}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=62; Line=          setActiveOrgId(importerOnly[0]?.id || "");}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=370; Line=              <div style={{ fontWeight: 800 }}>Active importer org</div>}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx; LineNumber=487; Line=// FILE: C:\Users\redfi\eu-cbam-reporter\marketing\pages\importer\users.tsx}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\imports\upload.tsx; LineNumber=100; Line=                  UI is wired and reachable from the authenticated dashboard. Next checklist step is to implement parsing and inserts.}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\supplier\[token].tsx; LineNumber=204; Line=/* Form layout */}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\supplier\[token].tsx; LineNumber=545; Line=    // Mark link as viewed for importer dashboard (best-effort; never block portal load)}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\supplier\supplier-portal-form.tsx; LineNumber=149; Line=      "importer_name",}
+@{Path=C:\Users\redfi\eu-cbam-reporter\marketing\pages\supplier\supplier-portal-form.tsx; LineNumber=150; Line=      "importerName",}
