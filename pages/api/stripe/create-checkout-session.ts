@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: proPriceId, quantity: 1 }],
-      success_url: `${origin}/pricing?success=1`,
+      success_url: `${origin}/app?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing?canceled=1`,
       allow_promotion_codes: false,
     })
