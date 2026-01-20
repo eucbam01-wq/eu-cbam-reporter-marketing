@@ -6,6 +6,49 @@ export const PLAN_TIER: PlanTier = ((process.env.NEXT_PUBLIC_PLAN_TIER || 'free'
   .toLowerCase()
   .trim() as PlanTier;
 
+const PLAN_OVERRIDE_KEY = 'gsx-plan-tier';
+
+function normalizeTier(input: any): PlanTier {
+  const raw = (input ?? '').toString().trim().toLowerCase();
+  if (raw === 'free' || raw === 'starter' || raw === 'pro' || raw === 'enterprise' || raw === 'unknown') return raw as PlanTier;
+  return 'unknown';
+}
+
+export function getEffectivePlanTier(): PlanTier {
+  try {
+    if (typeof window !== 'undefined' && window?.localStorage) {
+      const v = window.localStorage.getItem(PLAN_OVERRIDE_KEY);
+      if (v) {
+        const t = normalizeTier(v);
+        if (t !== 'unknown') return t;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return normalizeTier(PLAN_TIER) || 'free';
+}
+
+export function setPlanTierOverride(tier: PlanTier) {
+  try {
+    if (typeof window !== 'undefined' && window?.localStorage) {
+      window.localStorage.setItem(PLAN_OVERRIDE_KEY, normalizeTier(tier));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function clearPlanTierOverride() {
+  try {
+    if (typeof window !== 'undefined' && window?.localStorage) {
+      window.localStorage.removeItem(PLAN_OVERRIDE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 const ENTITLEMENTS: Record<PlanTier, Record<string, boolean>> = {
   free: {
     'nav.exposure': false,
@@ -60,7 +103,8 @@ const ENTITLEMENTS: Record<PlanTier, Record<string, boolean>> = {
 };
 
 export function hasEntitlement(key: string): boolean {
-  const tier = PLAN_TIER in ENTITLEMENTS ? PLAN_TIER : 'unknown';
+  const t = getEffectivePlanTier();
+  const tier = t in ENTITLEMENTS ? t : 'unknown';
   const map = ENTITLEMENTS[tier];
   if (key in map) return Boolean(map[key]);
   return false;

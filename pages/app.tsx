@@ -99,6 +99,15 @@ const SAMPLE_ROWS: GridRow[] = [
 
 
 function getPlanTier(): string {
+  try {
+    const mod: any = Entitlements as any;
+    if (typeof mod.getEffectivePlanTier === 'function') {
+      const t = (mod.getEffectivePlanTier() || 'free').toString().trim().toLowerCase();
+      return t || 'free';
+    }
+  } catch {
+    // ignore
+  }
   const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || "free").toString().trim().toLowerCase();
   return raw || "free";
 }
@@ -193,6 +202,26 @@ export default function AppPage() {
   const [search, setSearch] = useState("");
   const router = useRouter();
   const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q: any = router.query || {};
+    const checkout = (q.checkout || '').toString();
+    const sessionId = (q.session_id || '').toString();
+    if (checkout === 'success') {
+      try {
+        // Frontend-only entitlement refresh: mark this browser as Pro after successful checkout.
+        (Entitlements as any)?.setPlanTierOverride?.('pro');
+        if (sessionId) {
+          window.localStorage.setItem('gsx-last-checkout-session', sessionId);
+        }
+      } catch {
+        // ignore
+      }
+      // Force a clean URL + full reload so gating reads the updated tier.
+      window.location.replace('/app');
+    }
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     try {

@@ -1,14 +1,33 @@
 // File: marketing/pages/pricing.tsx
 import type { NextPage } from 'next'
 import Head from 'next/head'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import * as Entitlements from '../src/entitlements'
 
 const PricingPage: NextPage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [tier, setTier] = useState<string>('free')
+
+  useEffect(() => {
+    try {
+      const mod: any = Entitlements as any
+      if (typeof mod.getEffectivePlanTier === 'function') {
+        setTier((mod.getEffectivePlanTier() || 'free').toString())
+        return
+      }
+    } catch {
+      // ignore
+    }
+    setTier((process.env.NEXT_PUBLIC_PLAN_TIER || 'free').toString())
+  }, [])
 
   const startCheckout = async () => {
     try {
+      if (tier?.toString().toLowerCase() === 'pro' || tier?.toString().toLowerCase() === 'enterprise') {
+        window.location.assign('/app')
+        return
+      }
       setLoading(true)
       setError(null)
 
@@ -134,7 +153,11 @@ const PricingPage: NextPage = () => {
                 fontWeight: 700,
               }}
             >
-              {loading ? 'Redirecting…' : 'Upgrade to Pro'}
+              {tier?.toString().toLowerCase() === 'pro' || tier?.toString().toLowerCase() === 'enterprise'
+                ? 'Go to dashboard'
+                : loading
+                ? 'Redirecting…'
+                : 'Upgrade to Pro'}
             </button>
 
             {error ? (
