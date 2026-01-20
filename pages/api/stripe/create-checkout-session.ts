@@ -20,9 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20',
-    })
+    // Let the Stripe SDK use its default API version to avoid type/version mismatches.
+    const stripe = new Stripe(stripeSecretKey)
 
     const origin = req.headers.origin || `https://${req.headers.host}`
 
@@ -33,6 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cancel_url: `${origin}/pricing?canceled=1`,
       allow_promotion_codes: false,
     })
+
 
     return res.status(200).json({ url: session.url })
   } catch (e: any) {
