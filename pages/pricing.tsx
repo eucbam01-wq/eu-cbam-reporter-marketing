@@ -1,38 +1,13 @@
 // File: marketing/pages/pricing.tsx
 import type { NextPage } from 'next'
 import Head from 'next/head'
-import { useEffect, useMemo, useState } from 'react'
-import * as Entitlements from '../src/entitlements'
-import { useRouter } from 'next/router'
+import { useState } from 'react'
 
 const PricingPage: NextPage = () => {
-  const router = useRouter()
-  const planTier = useMemo(() => {
-    try {
-      const mod: any = Entitlements as any
-      if (typeof mod.getPlanTier === 'function') return mod.getPlanTier()
-    } catch {}
-    return 'free'
-  }, [])
-  const isPro = planTier === 'pro'
-
-  useEffect(() => {
-    if (!router.isReady) return
-    const q: any = router.query || {}
-    const checkout = (q.checkout || '').toString()
-    const sessionId = (q.session_id || '').toString()
-    if (checkout === 'success' && sessionId) {
-      try { (Entitlements as any).setPlanTier?.('pro') } catch {}
-      window.location.replace('/app')
-    }
-  }, [router.isReady, router.query])
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const startCheckout = async () => {
-    if (isPro) return
-
     try {
       setLoading(true)
       setError(null)
@@ -148,7 +123,7 @@ const PricingPage: NextPage = () => {
 
             <button
               onClick={startCheckout}
-              disabled={loading || isPro}
+              disabled={loading}
               style={{
                 marginTop: 14,
                 width: '100%',
@@ -159,7 +134,7 @@ const PricingPage: NextPage = () => {
                 fontWeight: 700,
               }}
             >
-              {isPro ? 'Pro active' : (loading ? 'Redirecting…' : 'Upgrade to Pro')}
+              {loading ? 'Redirecting…' : '{tier === "pro" ? "Current plan" : "Upgrade to Pro"}'}
             </button>
 
             {error ? (

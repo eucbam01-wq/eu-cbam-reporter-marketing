@@ -2,39 +2,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Stripe from 'stripe'
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET')
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  if (!stripeSecretKey) {
-    return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' })
-  }
-
-  const sessionId = (req.query.session_id || '').toString().trim()
-  if (!sessionId) {
-    return res.status(400).json({ error: 'Missing session_id' })
-  }
+  const session_id = (req.query.session_id || '').toString()
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' })
 
   try {
-    const stripe = new Stripe(stripeSecretKey)
-    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ['line_items.data.price'],
+    })
 
-    const subId = typeof session.subscription === 'string' ? session.subscription : null
-    if (!subId) {
-      return res.status(200).json({ entitled: false, plan: 'free' })
-    }
+    const paid = (session as any)?.payment_status === 'paid' || (session as any)?.status === 'complete'
+    if (!paid) return res.status(200).json({ tier: 'free' })
 
-    const sub = await stripe.subscriptions.retrieve(subId)
-    const status = (sub.status || '').toString()
-    const entitled = status === 'active' || status === 'trialing'
+    const proPriceId = (process.env.STRIPE_PRICE_PRO_ANNUAL || '').toString()
+    const items = (session as any)?.line_items?.data || []
+    const hasPro = proPriceId
+      ? items.some((it: any) => (it?.price?.id || '') === proPriceId)
+      : true
 
-    return res.status(200).json({ entitled, plan: entitled ? 'pro' : 'free', subscription_status: status })
+    return res.status(200).json({ tier: hasPro ? 'pro' : 'free' })
   } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'Stripe error' })
+    return res.status(200).json({ tier: 'free' })
   }
 }
 

@@ -99,12 +99,8 @@ const SAMPLE_ROWS: GridRow[] = [
 
 
 function getPlanTier(): string {
-  try {
-    const mod: any = Entitlements as any;
-    if (typeof mod.getPlanTier === 'function') return (mod.getPlanTier() || 'free').toString();
-  } catch {}
-  const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || 'free').toString().trim().toLowerCase();
-  return raw || 'free';
+  const raw = (process.env.NEXT_PUBLIC_PLAN_TIER || "free").toString().trim().toLowerCase();
+  return raw || "free";
 }
 
 type AnyEntitlements = Record<string, any>;
@@ -196,21 +192,36 @@ export default function AppPage() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [search, setSearch] = useState("");
   const router = useRouter();
+  
+// Stripe return: force entitlement refresh and remove query params.
+useEffect(() => {
+  const q: any = router.query || {};
+  const checkout = (q.checkout || '').toString();
+  const sessionId = (q.session_id || '').toString();
 
-  const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    const q: any = router.query || {};
-    const checkout = (q.checkout || '').toString();
-    const sessionId = (q.session_id || '').toString();
-    if (checkout === 'success' && sessionId) {
+  if (checkout === 'success' && sessionId) {
+    (async () => {
       try {
-        (Entitlements as any).setPlanTier?.('pro');
-      } catch {}
-      window.location.replace('/app');
-    }
-  }, [router.isReady, router.query]);
+        const r = await fetch(`/api/stripe/entitlement?session_id=${encodeURIComponent(sessionId)}`, {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' },
+        });
+        const j = await r.json().catch(() => ({} as any));
+        const tier = (j?.tier || '').toString().toLowerCase();
+        if (tier === 'pro' || tier === 'enterprise' || tier === 'starter') {
+          Entitlements.setPlanTier(tier as any);
+        }
+      } catch {
+        // ignore
+      } finally {
+        // Full page load to apply gating; strip params.
+        window.location.replace('/app');
+      }
+    })();
+  }
+}, [router.isReady]);
+const isActive = (href: string) => router.asPath === href || router.asPath.startsWith(`${href}#`) || router.asPath.startsWith(`${href}?`);
 
   useEffect(() => {
     try {

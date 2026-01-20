@@ -2,149 +2,122 @@
 
 export type PlanTier = 'free' | 'starter' | 'pro' | 'enterprise' | 'unknown';
 
-const STORAGE_KEY = 'gsx_plan_tier';
+const LS_KEY = 'gs_plan_tier';
 
-function normalizeTier(input: any): PlanTier {
-  const raw = (input ?? '').toString().trim().toLowerCase();
-  if (raw === 'free') return 'free';
-  if (raw === 'starter') return 'starter';
-  if (raw === 'pro') return 'pro';
-  if (raw === 'enterprise') return 'enterprise';
-  return 'unknown';
-}
+export const ENV_PLAN_TIER: PlanTier = ((process.env.NEXT_PUBLIC_PLAN_TIER || 'free') + '')
+  .toLowerCase()
+  .trim() as PlanTier;
 
-function envTier(): PlanTier {
-  return normalizeTier(process.env.NEXT_PUBLIC_PLAN_TIER || 'free');
-}
-
-function readStoredTier(): PlanTier | null {
-  try {
-    if (typeof window === 'undefined') return null;
-    const v = window.localStorage.getItem(STORAGE_KEY);
-    if (!v) return null;
-    const t = normalizeTier(v);
-    return t === 'unknown' ? null : t;
-  } catch {
-    return null;
-  }
-}
+const ENTITLEMENTS: Record<PlanTier, Record<string, boolean>> = {
+  free: {
+    'nav.exposure': false,
+    'nav.scenarios': false,
+    'nav.certificates': true,
+    'nav.forecast': false,
+    'action.create_report': true,
+    'action.export': false,
+    'action.upload_certificate': false,
+    'action.manage_suppliers': false,
+  },
+  starter: {
+    'nav.exposure': false,
+    'nav.scenarios': false,
+    'nav.certificates': true,
+    'nav.forecast': false,
+    'action.create_report': true,
+    'action.export': false,
+    'action.upload_certificate': false,
+    'action.manage_suppliers': false,
+  },
+  pro: {
+    'nav.exposure': true,
+    'nav.scenarios': true,
+    'nav.certificates': true,
+    'nav.forecast': true,
+    'action.create_report': true,
+    'action.export': true,
+    'action.upload_certificate': true,
+    'action.manage_suppliers': true,
+  },
+  enterprise: {
+    'nav.exposure': true,
+    'nav.scenarios': true,
+    'nav.certificates': true,
+    'nav.forecast': true,
+    'action.create_report': true,
+    'action.export': true,
+    'action.upload_certificate': true,
+    'action.manage_suppliers': true,
+  },
+  unknown: {
+    'nav.exposure': false,
+    'nav.scenarios': false,
+    'nav.certificates': true,
+    'nav.forecast': false,
+    'action.create_report': true,
+    'action.export': false,
+    'action.upload_certificate': false,
+    'action.manage_suppliers': false,
+  },
+};
 
 export function getPlanTier(): PlanTier {
-  return readStoredTier() || envTier() || 'free';
+  try {
+    if (typeof window !== 'undefined') {
+      const v = (window.localStorage.getItem(LS_KEY) || '').toLowerCase().trim() as PlanTier;
+      if (v && v in ENTITLEMENTS) return v;
+    }
+  } catch {
+    // ignore
+  }
+  const tier = ENV_PLAN_TIER in ENTITLEMENTS ? ENV_PLAN_TIER : 'unknown';
+  return tier;
 }
 
-export function setPlanTier(tier: PlanTier) {
+export function setPlanTier(tier: PlanTier): void {
   try {
-    if (typeof window === 'undefined') return;
-    const t = normalizeTier(tier);
-    window.localStorage.setItem(STORAGE_KEY, t);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LS_KEY, (tier || 'free') as string);
+    }
   } catch {
     // ignore
   }
 }
 
-const ENTITLEMENTS: Record<PlanTier, Record<string, boolean>> = {
-  free: {
-    exposure_dashboard: false,
-    scenarios: false,
-    forecast: false,
-    audit: false,
-    import_uploads: false,
-    reporting: true,
-    suppliers: true,
-    entities: true,
-    users: true,
-    settings: true,
-    command_center: true,
-  },
-  starter: {
-    exposure_dashboard: true,
-    scenarios: false,
-    forecast: true,
-    audit: true,
-    import_uploads: true,
-    reporting: true,
-    suppliers: true,
-    entities: true,
-    users: true,
-    settings: true,
-    command_center: true,
-  },
-  pro: {
-    exposure_dashboard: true,
-    scenarios: true,
-    forecast: true,
-    audit: true,
-    import_uploads: true,
-    reporting: true,
-    suppliers: true,
-    entities: true,
-    users: true,
-    settings: true,
-    command_center: true,
-  },
-  enterprise: {
-    exposure_dashboard: true,
-    scenarios: true,
-    forecast: true,
-    audit: true,
-    import_uploads: true,
-    reporting: true,
-    suppliers: true,
-    entities: true,
-    users: true,
-    settings: true,
-    command_center: true,
-  },
-  unknown: {
-    exposure_dashboard: false,
-    scenarios: false,
-    forecast: false,
-    audit: false,
-    import_uploads: false,
-    reporting: false,
-    suppliers: false,
-    entities: false,
-    users: false,
-    settings: false,
-    command_center: false,
-  },
-};
-
-export function hasEntitlement(planTierOrKey: any, maybeKey?: string): boolean {
-  // Supports BOTH signatures:
-  // 1) hasEntitlement('pro', 'exposure_dashboard')
-  // 2) hasEntitlement('exposure_dashboard') -> uses current plan tier
-  const planTier = maybeKey ? normalizeTier(planTierOrKey) : getPlanTier();
-  const key = maybeKey ? (maybeKey || '') : (planTierOrKey || '');
-  const t = planTier in ENTITLEMENTS ? planTier : 'unknown';
-  const map = ENTITLEMENTS[t];
-  return Boolean(map[key]);
-}
-
-export function lockedText(key: string): string {
-  if (hasEntitlement(key)) return '';
-  return 'Locked: upgrade required';
-}
-
-export async function refreshPlanTierFromCheckout(sessionId: string): Promise<PlanTier> {
-  if (!sessionId) return getPlanTier();
-
+export function clearPlanTierOverride(): void {
   try {
-    const res = await fetch(`/api/stripe/entitlement?session_id=${encodeURIComponent(sessionId)}`, {
-      method: 'GET',
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' },
-    });
-
-    if (!res.ok) return getPlanTier();
-    const json: any = await res.json();
-    const tier = normalizeTier(json?.plan_tier || json?.tier || json?.plan || 'unknown');
-    if (tier !== 'unknown') setPlanTier(tier);
-    return getPlanTier();
+    if (typeof window !== 'undefined') window.localStorage.removeItem(LS_KEY);
   } catch {
-    return getPlanTier();
+    // ignore
   }
+}
+
+export function getEntitlementsForPlan(planTier: string): Record<string, boolean> {
+  const tier = (planTier || '').toLowerCase().trim() as PlanTier;
+  const t = tier in ENTITLEMENTS ? tier : 'unknown';
+  return ENTITLEMENTS[t];
+}
+
+// Supports both signatures:
+// 1) hasEntitlement("nav.exposure")
+// 2) hasEntitlement("pro", "nav.exposure")
+export function hasEntitlement(a: string, b?: string): boolean {
+  if (typeof b === 'string') {
+    const ent = getEntitlementsForPlan(a);
+    if (b in ent) return Boolean(ent[b]);
+    return false;
+  }
+
+  const key = a;
+  const ent = getEntitlementsForPlan(getPlanTier());
+  if (key in ent) return Boolean(ent[key]);
+  return false;
+}
+
+export function lockedText(a: string, b?: string): string {
+  const ok = typeof b === 'string' ? hasEntitlement(a, b) : hasEntitlement(a);
+  if (ok) return '';
+  return 'Locked: upgrade required';
 }
 
 // File: src/entitlements.ts (C:\Users\redfi\eu-cbam-reporter\marketing\src\entitlements.ts)
