@@ -44,6 +44,7 @@ export default function ImporterIndexPage() {
         <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ActionButton label="Create report" href="/importer/reports/new" entitlementKey="action.create_report" />
           <ActionButton label="Export (CSV/XML)" href="/importer/exports" entitlementKey="action.export" />
+          <ActionButton label="Inspector export pack" href="/importer/inspector-pack" entitlementKey="action.export" />
           <ActionButton label="Upload certificate" href="/importer/certificates" entitlementKey="action.upload_certificate" />
           <ActionButton label="Manage suppliers" href="/importer/suppliers" entitlementKey="action.manage_suppliers" />
         </div>
