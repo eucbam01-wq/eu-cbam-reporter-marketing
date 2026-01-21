@@ -787,13 +787,20 @@ export default function AppPage() {
         }
 
         .gsx-lockedLink{
-          opacity: .55;
+          opacity: 1;
           cursor: not-allowed;
           pointer-events: auto;
+          color: var(--text);
+          border-color: var(--border);
+          background: rgba(255,255,255,.02);
+        }
+
+        .gsx-root[data-theme="light"] .gsx-lockedLink{
+          background: rgba(255,255,255,.75);
         }
 
         .gsx-lockedLink:hover{
-          border-color: var(--border);
+          border-color: var(--borderStrong);
           filter: none;
         }
 
@@ -982,9 +989,9 @@ export default function AppPage() {
 
           <nav className="gsx-nav">
             <GatedLink className={`gsx-navItem ${isActive("/app") ? "gsx-navItemActive" : ""}`} href="/app" featureKey="command_center" title="Command Center"><span>Command Center</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/inspector-pack") ? "gsx-navItemActive" : ""}`} href="/importer/inspector-pack" featureKey="audit" title="Inspector pack"><span>Inspector pack</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/emissions-review") ? "gsx-navItemActive" : ""}`} href="/importer/emissions-review" featureKey="reporting" title="Reporting"><span>Reporting</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/exposure-dashboard") ? "gsx-navItemActive" : ""}`} href="/importer/exposure-dashboard" featureKey="exposure_dashboard" title="Exposure dashboard"><span>Exposure dashboard</span></GatedLink>
-            <GatedLink className={`gsx-navItem ${isActive("/importer/inspector-pack") ? "gsx-navItemActive" : ""}`} href="/importer/inspector-pack" featureKey="audit" title="Inspector pack"><span>Inspector pack</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/supplier-links") ? "gsx-navItemActive" : ""}`} href="/importer/supplier-links" featureKey="suppliers" title="Suppliers"><span>Suppliers</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/imports/upload") ? "gsx-navItemActive" : ""}`} href="/imports/upload" featureKey="import_uploads" title="Import uploads"><span>Import uploads</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/entities") ? "gsx-navItemActive" : ""}`} href="/importer/entities" featureKey="entities" title="Entities"><span>Entities</span></GatedLink>
