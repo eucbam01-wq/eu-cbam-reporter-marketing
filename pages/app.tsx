@@ -984,6 +984,7 @@ export default function AppPage() {
             <GatedLink className={`gsx-navItem ${isActive("/app") ? "gsx-navItemActive" : ""}`} href="/app" featureKey="command_center" title="Command Center"><span>Command Center</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/emissions-review") ? "gsx-navItemActive" : ""}`} href="/importer/emissions-review" featureKey="reporting" title="Reporting"><span>Reporting</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/exposure-dashboard") ? "gsx-navItemActive" : ""}`} href="/importer/exposure-dashboard" featureKey="exposure_dashboard" title="Exposure dashboard"><span>Exposure dashboard</span></GatedLink>
+            <GatedLink className={`gsx-navItem ${isActive("/importer/inspector-pack") ? "gsx-navItemActive" : ""}`} href="/importer/inspector-pack" featureKey="audit" title="Inspector pack"><span>Inspector pack</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/supplier-links") ? "gsx-navItemActive" : ""}`} href="/importer/supplier-links" featureKey="suppliers" title="Suppliers"><span>Suppliers</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/imports/upload") ? "gsx-navItemActive" : ""}`} href="/imports/upload" featureKey="import_uploads" title="Import uploads"><span>Import uploads</span></GatedLink>
             <GatedLink className={`gsx-navItem ${isActive("/importer/entities") ? "gsx-navItemActive" : ""}`} href="/importer/entities" featureKey="entities" title="Entities"><span>Entities</span></GatedLink>
@@ -1063,6 +1064,7 @@ export default function AppPage() {
               <GatedLink className="gsx-linkBtn" href="/imports/upload" featureKey="import_uploads" title="Import upload">Import upload</GatedLink>
               <GatedLink className="gsx-linkBtn" href="/importer/audit" featureKey="audit" title="Audit submissions">Audit submissions</GatedLink>
               <GatedLink className="gsx-linkBtn" href="/importer/exposure-dashboard" featureKey="exposure_dashboard" title="Exposure dashboard">Exposure dashboard</GatedLink>
+              <GatedLink className="gsx-linkBtn" href="/importer/inspector-pack" featureKey="audit" title="Inspector pack">Inspector pack</GatedLink>
             </div>
           </section>
 
