@@ -483,7 +483,7 @@ export default function ContactPage() {
                 <div className="gsc-card gsc-accentCard gsc-formCard">
                   <div className="gsc-formHeading">
                     <div>
-                      <h2 id="send-message" className="gsc-formTitlePill">Send us a message</h2>
+                      <h2 id="send-message" className="gsc-formTitlePill">Contact Us</h2>
                     </div>
                     <span
                       className={`gsc-formState gsc-formState-${submitState}`}
