@@ -483,8 +483,7 @@ export default function ContactPage() {
                 <div className="gsc-card gsc-accentCard gsc-formCard">
                   <div className="gsc-formHeading">
                     <div>
-                      <span className="gsc-formPill">Send us a message</span>
-                      <h2 id="send-message">Send us a message</h2>
+                      <h2 id="send-message" className="gsc-formTitlePill">Send us a message</h2>
                     </div>
                     <span
                       className={`gsc-formState gsc-formState-${submitState}`}
@@ -1551,22 +1550,6 @@ const styles = `
 .gsc-breadcrumb a{color:var(--support);text-decoration:none}
 .gsc-breadcrumb a:hover{text-decoration:underline}
 .gsc-kicker{display:inline-block;color:var(--brand);font-size:11px;font-weight:900;letter-spacing:.095em;text-transform:uppercase}
-.gsc-formPill{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:8px 14px;
-  margin-bottom:10px;
-  border-radius:999px;
-  border:1px solid rgba(48,98,99,.22);
-  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,248,248,.95));
-  color:var(--brand);
-  font-size:12px;
-  font-weight:900;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  box-shadow:0 6px 18px rgba(48,98,99,.08), inset 0 1px 0 rgba(255,255,255,.95);
-}
 .gsc-header h1{max-width:900px;margin:8px 0 0;font-size:clamp(44px,5.6vw,70px);line-height:1.02;letter-spacing:-.045em;font-weight:950;text-wrap:balance}
 .gsc-underline{width:124px;height:3px;margin-top:15px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--highlight),var(--support))}
 .gsc-copyMobile{margin-top:22px}
@@ -1607,6 +1590,29 @@ const styles = `
 .gsc-formCard::before{content:"";position:absolute;left:22px;right:22px;top:10px;height:2px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--highlight),var(--support))}
 .gsc-formHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-top:7px}
 .gsc-formHeading h2{margin:7px 0 0;font-size:clamp(25px,2.2vw,32px);line-height:1.12;letter-spacing:-.025em;font-weight:950}
+.gsc-formTitlePill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:max-content;
+  max-width:100%;
+  margin:8px 0 0;
+  padding:12px 20px;
+  border-radius:999px;
+  border:1px solid rgba(48,98,99,.30);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.99),rgba(244,248,248,.97)) padding-box,
+    linear-gradient(120deg,rgba(48,98,99,.72),rgba(255,214,23,.52),rgba(64,115,175,.58)) border-box;
+  color:var(--text);
+  font-size:clamp(24px,2.1vw,31px);
+  line-height:1.05;
+  letter-spacing:-.025em;
+  font-weight:950;
+  box-shadow:
+    0 12px 28px rgba(48,98,99,.08),
+    0 0 0 1px rgba(255,255,255,.80) inset,
+    0 0 22px rgba(64,115,175,.08);
+}
 .gsc-formState{display:inline-flex;align-items:center;justify-content:center;min-height:29px;padding:6px 9px;border-radius:999px;border:1px solid rgba(48,98,99,.23);background:rgba(48,98,99,.07);color:var(--brand);font-size:10px;font-weight:900;letter-spacing:.065em;text-transform:uppercase;white-space:nowrap}
 .gsc-formState-sending{color:var(--support);background:rgba(64,115,175,.08);border-color:rgba(64,115,175,.24)}
 .gsc-formState-success,.gsc-formState-email{color:var(--success);background:rgba(46,125,50,.08);border-color:rgba(46,125,50,.24)}
@@ -1707,7 +1713,8 @@ const styles = `
   .gsc-container{padding:0 12px}
   .gsc-layout{gap:19px}
   .gsc-formCard{padding:17px}
-  .gsc-formHeading{flex-direction:column}
+  .gsc-formHeading{flex-direction:column;align-items:flex-start}
+  .gsc-formTitlePill{width:100%;text-align:center;padding:11px 16px}
   .gsc-formState{white-space:normal;text-align:center}
   .gsc-radioRow{display:grid;grid-template-columns:1fr 1fr}
   .gsc-radioRow label{min-width:0}
