@@ -483,7 +483,7 @@ export default function ContactPage() {
                 <div className="gsc-card gsc-accentCard gsc-formCard">
                   <div className="gsc-formHeading">
                     <div>
-                      <span className="gsc-kicker">Contact form</span>
+                      <span className="gsc-formPill">Send us a message</span>
                       <h2 id="send-message">Send us a message</h2>
                     </div>
                     <span
@@ -1546,46 +1546,27 @@ const styles = `
 }
 .gsc-header{grid-area:header;min-width:0;align-self:start}
 .gsc-details{grid-area:details;min-width:0;align-self:start;display:grid;gap:18px}
-.gsc-formArea{
-  grid-area:form;
-  min-width:0;
-  align-self:start;
-  position:relative;
-  isolation:isolate;
-  border-radius:26px;
-}
-.gsc-formArea::before,
-.gsc-formArea::after{
-  content:"";
-  position:absolute;
-  pointer-events:none;
-  border-radius:28px;
-  background:
-    linear-gradient(
-      115deg,
-      rgba(48,98,99,.82),
-      rgba(255,214,23,.72),
-      rgba(64,115,175,.76),
-      rgba(48,98,99,.82)
-    );
-  background-size:320% 320%;
-  animation:gsc-form-glow 8s ease-in-out infinite;
-}
-.gsc-formArea::before{
-  inset:-9px;
-  z-index:-2;
-  opacity:.42;
-  filter:blur(19px);
-}
-.gsc-formArea::after{
-  inset:-2px;
-  z-index:-1;
-  opacity:.82;
-}
+.gsc-formArea{grid-area:form;min-width:0;align-self:start}
 .gsc-breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:14px;color:var(--muted);font-size:12px;font-weight:700}
 .gsc-breadcrumb a{color:var(--support);text-decoration:none}
 .gsc-breadcrumb a:hover{text-decoration:underline}
 .gsc-kicker{display:inline-block;color:var(--brand);font-size:11px;font-weight:900;letter-spacing:.095em;text-transform:uppercase}
+.gsc-formPill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 14px;
+  margin-bottom:10px;
+  border-radius:999px;
+  border:1px solid rgba(48,98,99,.22);
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,248,248,.95));
+  color:var(--brand);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  box-shadow:0 6px 18px rgba(48,98,99,.08), inset 0 1px 0 rgba(255,255,255,.95);
+}
 .gsc-header h1{max-width:900px;margin:8px 0 0;font-size:clamp(44px,5.6vw,70px);line-height:1.02;letter-spacing:-.045em;font-weight:950;text-wrap:balance}
 .gsc-underline{width:124px;height:3px;margin-top:15px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--highlight),var(--support))}
 .gsc-copyMobile{margin-top:22px}
@@ -1622,75 +1603,9 @@ const styles = `
 .gsc-nextCard p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
 .gsc-nextCard strong{display:block;margin-bottom:3px;color:var(--text);font-size:15px}
 
-.gsc-formCard{
-  padding:29px;
-  position:relative;
-  z-index:1;
-  overflow:hidden;
-  isolation:isolate;
-  border-color:transparent;
-  background:
-    radial-gradient(420px 220px at 108% -8%,rgba(255,214,23,.17),transparent 66%),
-    radial-gradient(380px 230px at -12% 7%,rgba(48,98,99,.12),transparent 67%),
-    linear-gradient(180deg,rgba(255,255,255,.985),rgba(250,252,252,.97));
-  box-shadow:
-    0 30px 88px rgba(2,6,23,.16),
-    0 18px 54px rgba(48,98,99,.13),
-    inset 0 1px 0 rgba(255,255,255,.95);
-}
-.gsc-formCard::before{
-  content:"";
-  position:absolute;
-  left:20px;
-  right:20px;
-  top:9px;
-  height:3px;
-  z-index:0;
-  border-radius:999px;
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      var(--brand),
-      var(--highlight),
-      var(--support),
-      transparent
-    );
-  background-size:220% 100%;
-  animation:gsc-form-beam 5.5s ease-in-out infinite;
-  box-shadow:0 0 18px rgba(48,98,99,.32);
-}
-.gsc-formCard::after{
-  content:"";
-  position:absolute;
-  width:250px;
-  height:250px;
-  right:-112px;
-  top:-128px;
-  z-index:0;
-  border-radius:50%;
-  background:
-    radial-gradient(
-      circle,
-      rgba(255,214,23,.18),
-      rgba(64,115,175,.10) 42%,
-      transparent 70%
-    );
-  animation:gsc-form-orb 6.5s ease-in-out infinite alternate;
-  pointer-events:none;
-}
-.gsc-formCard > *{
-  position:relative;
-  z-index:1;
-}
-.gsc-formHeading{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:14px;
-  padding:9px 0 17px;
-  border-bottom:1px solid rgba(48,98,99,.12);
-}
+.gsc-formCard{padding:29px;position:relative;overflow:hidden}
+.gsc-formCard::before{content:"";position:absolute;left:22px;right:22px;top:10px;height:2px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--highlight),var(--support))}
+.gsc-formHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-top:7px}
 .gsc-formHeading h2{margin:7px 0 0;font-size:clamp(25px,2.2vw,32px);line-height:1.12;letter-spacing:-.025em;font-weight:950}
 .gsc-formState{display:inline-flex;align-items:center;justify-content:center;min-height:29px;padding:6px 9px;border-radius:999px;border:1px solid rgba(48,98,99,.23);background:rgba(48,98,99,.07);color:var(--brand);font-size:10px;font-weight:900;letter-spacing:.065em;text-transform:uppercase;white-space:nowrap}
 .gsc-formState-sending{color:var(--support);background:rgba(64,115,175,.08);border-color:rgba(64,115,175,.24)}
@@ -1706,37 +1621,12 @@ const styles = `
 .gsc-radioRow input{width:17px;height:17px;margin:0;accent-color:var(--brand)}
 .gsc-formField{margin-bottom:14px}
 .gsc-requiredWrap{position:relative}
-.gsc-requiredWrap input,.gsc-requiredWrap select,.gsc-requiredWrap textarea{
-  display:block;
-  width:100%;
-  min-width:0;
-  border:1px solid rgba(195,205,205,.92);
-  border-radius:12px;
-  background:
-    linear-gradient(180deg,rgba(255,255,255,.99),rgba(249,251,251,.98));
-  color:var(--text);
-  outline:none;
-  box-shadow:
-    0 1px 0 rgba(2,6,23,.02),
-    inset 0 1px 0 rgba(255,255,255,.95);
-  transition:
-    border-color .18s ease,
-    box-shadow .18s ease,
-    background .18s ease,
-    transform .18s ease;
-}
+.gsc-requiredWrap input,.gsc-requiredWrap select,.gsc-requiredWrap textarea{display:block;width:100%;min-width:0;border:1px solid var(--border);border-radius:11px;background:#fff;color:var(--text);outline:none;box-shadow:0 1px 0 rgba(2,6,23,.02);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
 .gsc-requiredWrap input,.gsc-requiredWrap select{height:50px;padding:0 45px 0 14px}
 .gsc-requiredWrap select{appearance:none;padding-right:64px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 27px) 22px,calc(100% - 21px) 22px;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
 .gsc-requiredWrap textarea{min-height:142px;padding:14px 45px 14px 14px;resize:vertical;line-height:1.58}
 .gsc-requiredWrap input:hover,.gsc-requiredWrap select:hover,.gsc-requiredWrap textarea:hover{border-color:var(--borderStrong)}
-.gsc-requiredWrap input:focus,.gsc-requiredWrap select:focus,.gsc-requiredWrap textarea:focus{
-  border-color:rgba(48,98,99,.72);
-  background:#fff;
-  box-shadow:
-    0 0 0 4px rgba(48,98,99,.10),
-    0 10px 26px rgba(48,98,99,.10);
-  transform:translateY(-1px);
-}
+.gsc-requiredWrap input:focus,.gsc-requiredWrap select:focus,.gsc-requiredWrap textarea:focus{border-color:var(--support);box-shadow:0 0 0 4px rgba(64,115,175,.12)}
 .gsc-requiredWrap input[aria-invalid="true"],.gsc-requiredWrap select[aria-invalid="true"],.gsc-requiredWrap textarea[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 3px rgba(218,33,49,.08)}
 .gsc-requiredStar{position:absolute;right:15px;top:50%;transform:translateY(-50%);pointer-events:none;user-select:none;color:rgba(218,33,49,.95);font-size:17px;font-weight:950;line-height:1;text-shadow:0 0 6px rgba(218,33,49,.48),0 0 12px rgba(218,33,49,.30);filter:drop-shadow(0 0 5px rgba(218,33,49,.42));transition:color .18s ease,text-shadow .18s ease,filter .18s ease}
 .gsc-selectWrap .gsc-requiredStar{right:43px}
@@ -1750,95 +1640,16 @@ const styles = `
 .gsc-consent b{color:var(--danger)}
 .gsc-consentError{border-color:rgba(218,33,49,.48);background:rgba(218,33,49,.05)}
 .gsc-consentMessage{margin-left:1px}
-.gsc-submitWrap{
-  display:flex;
-  justify-content:center;
-  margin-top:22px;
-  position:relative;
-}
-.gsc-submitWrap::before{
-  content:"";
-  position:absolute;
-  width:72%;
-  height:28px;
-  left:14%;
-  bottom:-3px;
-  border-radius:50%;
-  background:rgba(48,98,99,.26);
-  filter:blur(18px);
-  opacity:.55;
-  pointer-events:none;
-}
+.gsc-submitWrap{display:flex;justify-content:center;margin-top:22px}
 .gsc-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:52px;padding:13px 21px;border-radius:999px;border:1px solid var(--border);text-decoration:none;font-weight:900;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease,filter .14s ease}
 .gsc-button:hover{transform:translateY(-1px);box-shadow:0 14px 32px rgba(2,6,23,.13)}
 .gsc-button:focus-visible{outline:3px solid rgba(64,115,175,.24);outline-offset:3px}
 .gsc-button:disabled{cursor:not-allowed;opacity:.66;transform:none;box-shadow:none}
-.gsc-buttonPrimary{
-  position:relative;
-  overflow:hidden;
-  color:#fff;
-  background:
-    linear-gradient(
-      115deg,
-      var(--brand),
-      #3D7475,
-      var(--support),
-      var(--brandDark)
-    );
-  background-size:240% 240%;
-  border-color:rgba(48,98,99,.42);
-  box-shadow:
-    0 12px 28px rgba(48,98,99,.22),
-    inset 0 1px 0 rgba(255,255,255,.16);
-  animation:gsc-button-flow 7s ease-in-out infinite;
-}
-.gsc-buttonPrimary::before{
-  content:"";
-  position:absolute;
-  top:-30%;
-  bottom:-30%;
-  left:-55%;
-  width:42%;
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(255,255,255,.34),
-      transparent
-    );
-  transform:skewX(-18deg);
-  animation:gsc-button-shine 4.8s ease-in-out infinite;
-  pointer-events:none;
-}
-.gsc-buttonPrimary > *{
-  position:relative;
-  z-index:1;
-}
+.gsc-buttonPrimary{color:#fff;background:linear-gradient(180deg,var(--brand),var(--brandDark));border-color:rgba(48,98,99,.42)}
 .gsc-buttonSecondary{color:var(--text);background:#fff}
 .gsc-deliveryNote{margin:11px 0 0;color:var(--muted);font-size:10.5px;line-height:1.45;text-align:center}
 .gsc-spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.42);border-top-color:#fff;animation:gsc-spin .8s linear infinite}
 @keyframes gsc-spin{to{transform:rotate(360deg)}}
-@keyframes gsc-form-glow{
-  0%,100%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-}
-@keyframes gsc-form-beam{
-  0%,100%{background-position:0% 50%;opacity:.72}
-  50%{background-position:100% 50%;opacity:1}
-}
-@keyframes gsc-form-orb{
-  0%{transform:translate3d(0,0,0) scale(.96);opacity:.72}
-  100%{transform:translate3d(-28px,24px,0) scale(1.08);opacity:1}
-}
-@keyframes gsc-button-flow{
-  0%,100%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-}
-@keyframes gsc-button-shine{
-  0%,58%{left:-55%;opacity:0}
-  68%{opacity:1}
-  88%,100%{left:125%;opacity:0}
-}
 .gsc-feedback{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;margin-top:16px;padding:12px 13px;border-radius:13px;border:1px solid var(--border);font-size:13px;line-height:1.5}
 .gsc-feedback p{margin:0}
 .gsc-feedback-notice{color:#355E8E;background:rgba(64,115,175,.08);border-color:rgba(64,115,175,.24)}
@@ -1894,8 +1705,6 @@ const styles = `
 }
 @media(max-width:540px){
   .gsc-container{padding:0 12px}
-  .gsc-formArea::before{inset:-5px;filter:blur(13px);opacity:.34}
-  .gsc-formArea::after{inset:-1px;opacity:.70}
   .gsc-layout{gap:19px}
   .gsc-formCard{padding:17px}
   .gsc-formHeading{flex-direction:column}
@@ -1910,17 +1719,6 @@ const styles = `
   .gsc-bottomActions .gsc-button{width:100%}
 }
 @media(prefers-reduced-motion:reduce){
-  .gsc-root *{
-    scroll-behavior:auto!important;
-    transition:none!important;
-    animation:none!important;
-  }
-  .gsc-formArea::before,
-  .gsc-formArea::after,
-  .gsc-formCard::before,
-  .gsc-formCard::after,
-  .gsc-buttonPrimary::before{
-    animation:none!important;
-  }
+  .gsc-root *{scroll-behavior:auto!important;transition:none!important;animation-duration:.001ms!important;animation-iteration-count:1!important}
 }
 `;
