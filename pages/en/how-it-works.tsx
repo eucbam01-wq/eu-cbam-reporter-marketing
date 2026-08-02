@@ -259,6 +259,61 @@ export default function HowItWorksPage() {
           </div>
         </section>
 
+        <section className="gsh-videoSection" aria-labelledby="walkthrough-title">
+          <div className="gsh-container">
+            <div className="gsh-videoSurface">
+              <header className="gsh-videoHeader">
+                <div>
+                  <span className="gsh-kicker">Product walkthrough</span>
+                  <h2 id="walkthrough-title" className="gsh-h2">
+                    Watch the complete importer-to-supplier workflow.
+                  </h2>
+                  <p id="walkthrough-description">
+                    See how an importer starts with basic details, sends a secure
+                    supplier link, receives facility and emissions evidence, reviews
+                    the response, and moves the record towards CBAM-ready output.
+                  </p>
+                </div>
+
+                <div className="gsh-videoBadge" aria-label="Video duration: 1 minute 6 seconds">
+                  <span className="gsh-videoBadgeIcon">{iconPlay()}</span>
+                  <div>
+                    <strong>1 min 06 sec</strong>
+                    <small>GrandScope product demo</small>
+                  </div>
+                </div>
+              </header>
+
+              <div className="gsh-videoFrame">
+                <div className="gsh-videoTopbar" aria-hidden="true">
+                  <span className="gsh-videoDots"><i /><i /><i /></span>
+                  <strong>GrandScope workflow walkthrough</strong>
+                  <span className="gsh-videoQuality">HD</span>
+                </div>
+
+                <video
+                  className="gsh-video"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster="/videos/how-it-works-poster.jpg"
+                  aria-describedby="walkthrough-description"
+                >
+                  <source src="/videos/how-it-works.mp4" type="video/mp4" />
+                  Your browser does not support embedded video. You can{' '}
+                  <a href="/videos/how-it-works.mp4">open the walkthrough directly</a>.
+                </video>
+              </div>
+
+              <div className="gsh-videoHighlights" aria-label="Walkthrough topics">
+                <span>{iconCheck()} Importer starts with basic details</span>
+                <span>{iconCheck()} Secure link collects supplier data</span>
+                <span>{iconCheck()} Review leads to CBAM-ready output</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="gsh-section" aria-labelledby="chain-title">
           <div className="gsh-container">
             <header className="gsh-sectionHead">
@@ -744,6 +799,15 @@ function renderWorkflowIcon(icon: string) {
   }
 }
 
+function iconPlay() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="m10 8 6 4-6 4V8Z" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function iconCheck() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -992,6 +1056,137 @@ const styles = `
 .gsh-consoleFoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:14px 18px;background:rgba(233,236,235,.58);border-top:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:800}
 .gsh-consoleFoot span{display:flex;align-items:center;gap:5px}
 
+.gsh-videoSection{padding:0 0 54px}
+.gsh-videoSurface{
+  position:relative;
+  overflow:hidden;
+  border-radius:28px;
+  border:1px solid transparent;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.89)) padding-box,
+    linear-gradient(135deg,rgba(57,107,108,.58),rgba(255,216,23,.42),rgba(63,117,181,.32)) border-box;
+  box-shadow:0 28px 88px rgba(26,42,44,.14);
+  padding:28px;
+}
+.gsh-videoSurface::before{
+  content:"";
+  position:absolute;
+  width:540px;
+  height:540px;
+  right:-300px;
+  top:-330px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,216,23,.18),rgba(63,117,181,.08) 46%,transparent 70%);
+  pointer-events:none;
+}
+.gsh-videoHeader{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:28px;
+  margin-bottom:20px;
+}
+.gsh-videoHeader>div:first-child{max-width:920px}
+.gsh-videoHeader .gsh-h2{margin-bottom:10px}
+.gsh-videoHeader p{font-size:17px;line-height:1.72;color:var(--muted);margin:0;max-width:880px}
+.gsh-videoBadge{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-width:220px;
+  border:1px solid rgba(57,107,108,.25);
+  border-radius:17px;
+  background:rgba(255,255,255,.84);
+  padding:12px 14px;
+  box-shadow:0 12px 34px rgba(22,35,37,.07);
+}
+.gsh-videoBadgeIcon{
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  background:linear-gradient(180deg,var(--brand),var(--brandDark));
+  box-shadow:0 8px 20px rgba(57,107,108,.22);
+}
+.gsh-videoBadge>div{display:flex;flex-direction:column}
+.gsh-videoBadge strong{font-size:14px;font-weight:950;line-height:1.25}
+.gsh-videoBadge small{font-size:11px;color:var(--muted);margin-top:3px}
+.gsh-videoFrame{
+  position:relative;
+  z-index:1;
+  overflow:hidden;
+  border-radius:22px;
+  border:1px solid var(--borderStrong);
+  background:#142729;
+  box-shadow:0 26px 70px rgba(22,35,37,.18);
+}
+.gsh-videoTopbar{
+  min-height:43px;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:12px;
+  padding:9px 14px;
+  color:#5f6c6d;
+  background:linear-gradient(180deg,#fdfefe,#edf0ef);
+  border-bottom:1px solid rgba(159,174,172,.75);
+}
+.gsh-videoTopbar strong{font-size:11px;letter-spacing:.025em;text-align:center;white-space:nowrap}
+.gsh-videoDots{display:flex;align-items:center;gap:6px;justify-self:start}
+.gsh-videoDots i{width:9px;height:9px;border-radius:50%;display:block;background:#aab5b4}
+.gsh-videoDots i:first-child{background:var(--brand)}
+.gsh-videoDots i:nth-child(2){background:var(--highlight);border:1px solid #c9aa00}
+.gsh-videoDots i:last-child{background:var(--support)}
+.gsh-videoQuality{
+  justify-self:end;
+  border-radius:999px;
+  border:1px solid rgba(63,117,181,.20);
+  background:rgba(63,117,181,.08);
+  color:var(--support);
+  padding:5px 8px;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+.gsh-video{
+  display:block;
+  width:100%;
+  aspect-ratio:16/9;
+  object-fit:contain;
+  background:#142729;
+}
+.gsh-video:focus-visible{outline:3px solid rgba(255,216,23,.70);outline-offset:-3px}
+.gsh-videoHighlights{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+.gsh-videoHighlights span{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:46px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.85);
+  color:#5f6767;
+  padding:10px 12px;
+  font-size:12px;
+  font-weight:850;
+  text-align:center;
+}
+.gsh-videoHighlights svg{flex:0 0 16px;color:var(--success)}
+
 .gsh-section{padding:50px 0}
 .gsh-sectionSoft{background:linear-gradient(180deg,rgba(225,229,228,.52),rgba(243,244,243,.24))}
 .gsh-sectionHead{max-width:900px;margin-bottom:26px}
@@ -1146,6 +1341,8 @@ const styles = `
 }
 @media(max-width:920px){
   .gsh-heroGrid,.gsh-split,.gsh-ledgerSurface,.gsh-outputPanel{grid-template-columns:1fr}
+  .gsh-videoHeader{grid-template-columns:1fr;align-items:start}
+  .gsh-videoBadge{min-width:0;width:max-content;max-width:100%}
   .gsh-console{max-width:720px}
   .gsh-outputTrack{grid-template-columns:repeat(5,minmax(100px,1fr));overflow-x:auto;padding-bottom:5px}
   .gsh-finalCta{align-items:flex-start;flex-direction:column}
@@ -1155,6 +1352,13 @@ const styles = `
   .gsh-container{width:min(100% - 22px,1420px)}
   .gsh-hero{padding-top:12px}
   .gsh-heroPanel,.gsh-surface,.gsh-management{padding:19px}
+  .gsh-videoSurface{padding:16px;border-radius:22px}
+  .gsh-videoSection{padding-bottom:40px}
+  .gsh-videoHeader{gap:17px;margin-bottom:15px}
+  .gsh-videoHeader p{font-size:16px}
+  .gsh-videoFrame{border-radius:17px}
+  .gsh-videoHighlights{grid-template-columns:1fr}
+  .gsh-videoHighlights span{justify-content:flex-start;text-align:left}
   .gsh-h1{font-size:43px;line-height:1.04}
   .gsh-lead{font-size:18px}
   .gsh-section{padding:38px 0}
@@ -1181,6 +1385,9 @@ const styles = `
   .gsh-consoleRow{grid-template-columns:42px minmax(0,1fr)}
   .gsh-consoleRow>b{grid-column:2;justify-self:start}
   .gsh-consoleFoot{display:grid;gap:8px}
+  .gsh-videoTopbar{grid-template-columns:1fr auto}
+  .gsh-videoTopbar strong{display:none}
+  .gsh-videoBadge{width:100%}
   .gsh-stepMain h3{font-size:23px}
 }
 `;
