@@ -162,6 +162,13 @@ export default function HowItWorksPage() {
     }
   };
 
+  const scrollToWalkthrough = () => {
+    document.getElementById("walkthrough-title")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <>
       <Head>
@@ -221,9 +228,15 @@ export default function HowItWorksPage() {
                     <Link className="gsh-btn gsh-btnPrimary" href="/check">
                       Start free CBAM report
                     </Link>
-                    <Link className="gsh-btn gsh-btnGhost" href="/en/contact">
-                      Request live walkthrough
-                    </Link>
+                    <button
+                      type="button"
+                      className="gsh-btn gsh-btnGhost gsh-desktopDemoButton"
+                      onClick={scrollToWalkthrough}
+                      aria-label="Scroll to the one minute GrandScope product demo"
+                    >
+                      {iconPlay()}
+                      Watch 1 minute demo
+                    </button>
                     <Link className="gsh-textLink" href="/en/pricing">
                       View plans {iconArrow()}
                     </Link>
@@ -256,12 +269,12 @@ export default function HowItWorksPage() {
                           type="button"
                           className="gsh-mobileVideoOverlay"
                           onClick={playMobileWalkthrough}
-                          aria-label="Play the GrandScope walkthrough with sound"
+                          aria-label="Play Video with sound"
                         >
                           <span className="gsh-mobilePlayButton" aria-hidden="true">
                             {iconPlay()}
                           </span>
-                          <strong>Play walkthrough</strong>
+                          <strong>Play Video</strong>
                           <small>1 min 06 sec · Starts with sound</small>
                         </button>
                       ) : null}
@@ -392,13 +405,13 @@ export default function HowItWorksPage() {
                       type="button"
                       className="gsh-videoOverlay"
                       onClick={playWalkthrough}
-                      aria-label="Play the GrandScope walkthrough with sound"
+                      aria-label="Play Video with sound"
                     >
                       <span className="gsh-videoOverlayGlow" aria-hidden="true" />
                       <span className="gsh-videoPlayButton" aria-hidden="true">
                         {iconPlay()}
                       </span>
-                      <strong>Play product walkthrough</strong>
+                      <strong>Play Video</strong>
                       <small>Starts with sound</small>
                     </button>
                   ) : null}
@@ -1132,6 +1145,8 @@ const styles = `
 .gsh-btn:hover{transform:translateY(-1px);box-shadow:var(--shadowLift);border-color:var(--borderStrong)}
 .gsh-btnPrimary{background:linear-gradient(180deg,var(--brand),var(--brandDark));color:#fff;border-color:rgba(57,107,108,.38)}
 .gsh-btnGhost{background:rgba(255,255,255,.96);color:var(--text)}
+.gsh-desktopDemoButton{gap:8px;cursor:pointer;font:inherit}
+.gsh-desktopDemoButton svg{flex:0 0 auto}
 .gsh-textLink{display:inline-flex;align-items:center;gap:5px;color:var(--support);font-weight:900;text-decoration:none;padding:10px 6px}
 .gsh-textLink:hover{text-decoration:underline}
 .gsh-trust{display:flex;gap:20px;flex-wrap:wrap;margin-top:20px;color:#656565;font-size:13px;font-weight:700}
@@ -1522,6 +1537,8 @@ const styles = `
   .gsh-finalActions{width:100%}
 }
 @media(max-width:720px){
+
+  .gsh-desktopDemoButton{display:none}
 
   .gsh-mobileWalkthrough{
     display:block;
