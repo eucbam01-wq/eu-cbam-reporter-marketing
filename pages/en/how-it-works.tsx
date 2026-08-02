@@ -128,7 +128,9 @@ const chainItems = [
 export default function HowItWorksPage() {
   const schema = buildSchema();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const mobileVideoRef = useRef<HTMLVideoElement>(null);
   const [videoStarted, setVideoStarted] = useState(false);
+  const [mobileVideoStarted, setMobileVideoStarted] = useState(false);
 
   const playWalkthrough = async () => {
     const video = videoRef.current;
@@ -142,6 +144,21 @@ export default function HowItWorksPage() {
       setVideoStarted(true);
     } catch (error) {
       console.error("Unable to start walkthrough video", error);
+    }
+  };
+
+  const playMobileWalkthrough = async () => {
+    const video = mobileVideoRef.current;
+    if (!video) return;
+
+    video.muted = false;
+    video.volume = 1;
+
+    try {
+      await video.play();
+      setMobileVideoStarted(true);
+    } catch (error) {
+      console.error("Unable to start mobile walkthrough video", error);
     }
   };
 
@@ -212,6 +229,50 @@ export default function HowItWorksPage() {
                     </Link>
                   </div>
 
+                  <section className="gsh-mobileWalkthrough" aria-labelledby="mobile-walkthrough-title">
+                    <span className="gsh-kicker">Product walkthrough</span>
+                    <h2 id="mobile-walkthrough-title">
+                      Watch the complete importer-to-supplier workflow.
+                    </h2>
+
+                    <div className={`gsh-mobileVideoStage ${mobileVideoStarted ? "is-playing" : ""}`}>
+                      <video
+                        ref={mobileVideoRef}
+                        className="gsh-mobileVideo"
+                        controls={mobileVideoStarted}
+                        playsInline
+                        preload="metadata"
+                        onPlay={() => setMobileVideoStarted(true)}
+                        onEnded={() => setMobileVideoStarted(false)}
+                        aria-label="GrandScope importer-to-supplier workflow demonstration"
+                      >
+                        <source src="/videos/how-it-works.mp4" type="video/mp4" />
+                        Your browser does not support embedded video. You can{' '}
+                        <a href="/videos/how-it-works.mp4">open the walkthrough directly</a>.
+                      </video>
+
+                      {!mobileVideoStarted ? (
+                        <button
+                          type="button"
+                          className="gsh-mobileVideoOverlay"
+                          onClick={playMobileWalkthrough}
+                          aria-label="Play the GrandScope walkthrough with sound"
+                        >
+                          <span className="gsh-mobilePlayButton" aria-hidden="true">
+                            {iconPlay()}
+                          </span>
+                          <strong>Play walkthrough</strong>
+                          <small>1 min 06 sec · Starts with sound</small>
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div className="gsh-mobileVideoMeta">
+                      <strong>1 min 06 sec</strong>
+                      <span>GrandScope product demo</span>
+                    </div>
+                  </section>
+
                   <div className="gsh-trust" aria-label="Workflow controls">
                     <span>{iconCheck()} Entity-separated access</span>
                     <span>{iconCheck()} Supplier evidence linked to imports</span>
@@ -281,11 +342,24 @@ export default function HowItWorksPage() {
           <div className="gsh-container">
             <div className="gsh-videoSurface">
               <header className="gsh-videoHeader">
-                <div className="gsh-videoTitleBlock">
+                <div>
                   <span className="gsh-kicker">Product walkthrough</span>
                   <h2 id="walkthrough-title" className="gsh-h2">
                     Watch the complete importer-to-supplier workflow.
                   </h2>
+                  <p id="walkthrough-description">
+                    See how an importer starts with basic details, sends a secure
+                    supplier link, receives facility and emissions evidence, reviews
+                    the response, and moves the record towards CBAM-ready output.
+                  </p>
+                </div>
+
+                <div className="gsh-videoBadge" aria-label="Video duration: 1 minute 6 seconds">
+                  <span className="gsh-videoBadgeIcon">{iconPlay()}</span>
+                  <div>
+                    <strong>1 min 06 sec</strong>
+                    <small>GrandScope product demo</small>
+                  </div>
                 </div>
               </header>
 
@@ -328,22 +402,6 @@ export default function HowItWorksPage() {
                       <small>Starts with sound</small>
                     </button>
                   ) : null}
-                </div>
-              </div>
-
-              <div className="gsh-videoMeta">
-                <p id="walkthrough-description">
-                  See how an importer starts with basic details, sends a secure
-                  supplier link, receives facility and emissions evidence, reviews
-                  the response, and moves the record towards CBAM-ready output.
-                </p>
-
-                <div className="gsh-videoBadge" aria-label="Video duration: 1 minute 6 seconds">
-                  <span className="gsh-videoBadgeIcon">{iconPlay()}</span>
-                  <div>
-                    <strong>1 min 06 sec</strong>
-                    <small>GrandScope product demo</small>
-                  </div>
                 </div>
               </div>
 
@@ -1080,6 +1138,9 @@ const styles = `
 .gsh-trust span{display:flex;align-items:center;gap:7px}
 .gsh-trust svg{color:var(--success)}
 
+
+.gsh-mobileWalkthrough{display:none}
+
 .gsh-console{border-radius:24px;border:1px solid rgba(199,204,203,.95);background:rgba(255,255,255,.93);box-shadow:var(--shadow);overflow:hidden;min-width:0}
 .gsh-consoleTop{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:22px 22px 18px;border-bottom:1px solid var(--border)}
 .gsh-consoleTop>div{display:flex;flex-direction:column}
@@ -1122,27 +1183,18 @@ const styles = `
   background:radial-gradient(circle,rgba(255,216,23,.18),rgba(63,117,181,.08) 46%,transparent 70%);
   pointer-events:none;
 }
-.gsh-videoSurface{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  grid-template-areas:
-    "title badge"
-    "description badge"
-    "video video"
-    "highlights highlights";
-  column-gap:28px;
-}
 .gsh-videoHeader{
   position:relative;
   z-index:1;
-  grid-area:title;
-  margin-bottom:8px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:28px;
+  margin-bottom:20px;
 }
-.gsh-videoTitleBlock{max-width:920px}
-.gsh-videoHeader .gsh-h2{margin-bottom:0}
-.gsh-videoMeta{display:contents}
-.gsh-videoMeta>p{grid-area:description;font-size:17px;line-height:1.72;color:var(--muted);margin:0 0 20px;max-width:880px}
-.gsh-videoMeta>.gsh-videoBadge{grid-area:badge;align-self:end;margin-bottom:20px}
+.gsh-videoHeader>div:first-child{max-width:920px}
+.gsh-videoHeader .gsh-h2{margin-bottom:10px}
+.gsh-videoHeader p{font-size:17px;line-height:1.72;color:var(--muted);margin:0;max-width:880px}
 .gsh-videoBadge{
   display:flex;
   align-items:center;
@@ -1170,7 +1222,6 @@ const styles = `
 .gsh-videoBadge strong{font-size:14px;font-weight:950;line-height:1.25}
 .gsh-videoBadge small{font-size:11px;color:var(--muted);margin-top:3px}
 .gsh-videoFrame{
-  grid-area:video;
   position:relative;
   width:min(100%,1120px);
   margin:0 auto;
@@ -1285,7 +1336,6 @@ const styles = `
 .gsh-videoOverlay:focus-visible{outline:4px solid var(--highlight);outline-offset:-4px}
 
 .gsh-videoHighlights{
-  grid-area:highlights;
   position:relative;
   z-index:1;
   display:grid;
@@ -1464,6 +1514,7 @@ const styles = `
 }
 @media(max-width:920px){
   .gsh-heroGrid,.gsh-split,.gsh-ledgerSurface,.gsh-outputPanel{grid-template-columns:1fr}
+  .gsh-videoHeader{grid-template-columns:1fr;align-items:start}
   .gsh-videoBadge{min-width:0;width:max-content;max-width:100%}
   .gsh-console{max-width:720px}
   .gsh-outputTrack{grid-template-columns:repeat(5,minmax(100px,1fr));overflow-x:auto;padding-bottom:5px}
@@ -1471,27 +1522,97 @@ const styles = `
   .gsh-finalActions{width:100%}
 }
 @media(max-width:720px){
+
+  .gsh-mobileWalkthrough{
+    display:block;
+    margin-top:26px;
+    padding:18px;
+    border-radius:20px;
+    border:1px solid rgba(57,107,108,.28);
+    background:rgba(255,255,255,.92);
+    box-shadow:0 18px 48px rgba(22,35,37,.10);
+  }
+  .gsh-mobileWalkthrough .gsh-kicker{margin-bottom:9px}
+  .gsh-mobileWalkthrough h2{
+    margin:0 0 15px;
+    font-size:27px;
+    line-height:1.1;
+    letter-spacing:-.03em;
+    font-weight:950;
+  }
+  .gsh-mobileVideoStage{
+    position:relative;
+    overflow:hidden;
+    width:100%;
+    border-radius:16px;
+    border:1px solid var(--borderStrong);
+    background:#142729;
+    box-shadow:0 18px 42px rgba(22,35,37,.16);
+  }
+  .gsh-mobileVideo{
+    display:block;
+    width:100%;
+    height:auto;
+    object-fit:contain;
+    background:#142729;
+  }
+  .gsh-mobileVideoStage:not(.is-playing) .gsh-mobileVideo{
+    filter:blur(2.5px) brightness(.62) saturate(.85);
+  }
+  .gsh-mobileVideoOverlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    width:100%;
+    border:0;
+    padding:18px;
+    color:#fff;
+    cursor:pointer;
+    background:linear-gradient(180deg,rgba(15,31,33,.12),rgba(15,31,33,.45));
+    backdrop-filter:blur(2px);
+    -webkit-backdrop-filter:blur(2px);
+    font:inherit;
+    text-align:center;
+  }
+  .gsh-mobilePlayButton{
+    width:68px;
+    height:68px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#243a3c;
+    background:linear-gradient(180deg,#ffe76c,var(--highlight));
+    border:4px solid rgba(255,255,255,.9);
+    box-shadow:0 15px 40px rgba(0,0,0,.34),0 0 0 9px rgba(255,255,255,.1);
+  }
+  .gsh-mobilePlayButton svg{width:27px;height:27px;margin-left:3px}
+  .gsh-mobileVideoOverlay strong{font-size:18px;font-weight:950;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+  .gsh-mobileVideoOverlay small{font-size:12px;font-weight:800;color:rgba(255,255,255,.88)}
+  .gsh-mobileVideoMeta{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:11px;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .gsh-mobileVideoMeta strong{color:var(--text);font-weight:950}
+  .gsh-mobileVideoMeta span::before{content:"•";margin-right:8px;color:var(--brand)}
+  .gsh-videoSection{display:none}
   .gsh-container{width:min(100% - 22px,1420px)}
   .gsh-videoSection .gsh-container{width:min(100% - 18px,1320px)}
-  .gsh-videoSurface{
-    padding:14px;
-    grid-template-columns:1fr;
-    grid-template-areas:
-      "title"
-      "video"
-      "description"
-      "badge"
-      "highlights";
-    row-gap:0;
-  }
-  .gsh-videoHeader{margin-bottom:15px}
-  .gsh-videoMeta{display:contents}
-  .gsh-videoMeta>p{margin:16px 0 14px;max-width:none}
-  .gsh-videoMeta>.gsh-videoBadge{align-self:start;margin:0 0 4px}
+  .gsh-videoSurface{padding:14px}
   .gsh-videoFrame{width:100%}
   .gsh-hero{padding-top:12px}
   .gsh-heroPanel,.gsh-surface,.gsh-management{padding:19px}
-  .gsh-videoSurface{border-radius:22px}
+  .gsh-videoSurface{padding:16px;border-radius:22px}
   .gsh-videoSection{padding-bottom:40px}
   .gsh-videoHeader{gap:17px;margin-bottom:15px}
   .gsh-videoHeader p{font-size:16px}
