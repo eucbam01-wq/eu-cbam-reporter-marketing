@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useRef, useState } from "react";
 
 const workflowSteps = [
   {
@@ -126,6 +127,23 @@ const chainItems = [
 
 export default function HowItWorksPage() {
   const schema = buildSchema();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoStarted, setVideoStarted] = useState(false);
+
+  const playWalkthrough = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = false;
+    video.volume = 1;
+
+    try {
+      await video.play();
+      setVideoStarted(true);
+    } catch (error) {
+      console.error("Unable to start walkthrough video", error);
+    }
+  };
 
   return (
     <>
@@ -291,21 +309,39 @@ export default function HowItWorksPage() {
                   <span className="gsh-videoQuality">HD</span>
                 </div>
 
-                <video
-                  className="gsh-video"
-                  autoPlay
-                  muted
-                  loop
-                  controls
-                  playsInline
-                  preload="auto"
-                  aria-describedby="walkthrough-description"
-                  aria-label="GrandScope importer-to-supplier workflow demonstration"
-                >
-                  <source src="/videos/how-it-works.mp4" type="video/mp4" />
-                  Your browser does not support embedded video. You can{' '}
-                  <a href="/videos/how-it-works.mp4">open the walkthrough directly</a>.
-                </video>
+                <div className={`gsh-videoStage ${videoStarted ? "is-playing" : ""}`}>
+                  <video
+                    ref={videoRef}
+                    className="gsh-video"
+                    controls={videoStarted}
+                    playsInline
+                    preload="metadata"
+                    onPlay={() => setVideoStarted(true)}
+                    onEnded={() => setVideoStarted(false)}
+                    aria-describedby="walkthrough-description"
+                    aria-label="GrandScope importer-to-supplier workflow demonstration"
+                  >
+                    <source src="/videos/how-it-works.mp4" type="video/mp4" />
+                    Your browser does not support embedded video. You can{' '}
+                    <a href="/videos/how-it-works.mp4">open the walkthrough directly</a>.
+                  </video>
+
+                  {!videoStarted ? (
+                    <button
+                      type="button"
+                      className="gsh-videoOverlay"
+                      onClick={playWalkthrough}
+                      aria-label="Play the GrandScope walkthrough with sound"
+                    >
+                      <span className="gsh-videoOverlayGlow" aria-hidden="true" />
+                      <span className="gsh-videoPlayButton" aria-hidden="true">
+                        {iconPlay()}
+                      </span>
+                      <strong>Play product walkthrough</strong>
+                      <small>Starts with sound</small>
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               <div className="gsh-videoHighlights" aria-label="Walkthrough topics">
@@ -1158,6 +1194,11 @@ const styles = `
   font-weight:950;
   letter-spacing:.08em;
 }
+.gsh-videoStage{
+  position:relative;
+  background:#142729;
+  overflow:hidden;
+}
 .gsh-video{
   display:block;
   width:100%;
@@ -1167,7 +1208,68 @@ const styles = `
   object-fit:contain;
   background:#142729;
 }
+.gsh-videoStage:not(.is-playing) .gsh-video{
+  filter:blur(3px) brightness(.62) saturate(.82);
+  transform:scale(1.012);
+}
 .gsh-video:focus-visible{outline:3px solid rgba(255,216,23,.70);outline-offset:-3px}
+.gsh-videoOverlay{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  border:0;
+  padding:24px;
+  color:#fff;
+  cursor:pointer;
+  background:linear-gradient(180deg,rgba(15,31,33,.12),rgba(15,31,33,.42));
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  font:inherit;
+  text-align:center;
+}
+.gsh-videoOverlay::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 50%,rgba(255,216,23,.12),transparent 36%);
+  pointer-events:none;
+}
+.gsh-videoOverlayGlow{
+  position:absolute;
+  width:170px;
+  height:170px;
+  border-radius:50%;
+  background:rgba(255,216,23,.16);
+  filter:blur(35px);
+  pointer-events:none;
+}
+.gsh-videoPlayButton{
+  position:relative;
+  z-index:1;
+  width:84px;
+  height:84px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#243a3c;
+  background:linear-gradient(180deg,#ffe76c,var(--highlight));
+  border:5px solid rgba(255,255,255,.88);
+  box-shadow:0 18px 55px rgba(0,0,0,.34),0 0 0 12px rgba(255,255,255,.10);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.gsh-videoPlayButton svg{width:31px;height:31px;margin-left:4px}
+.gsh-videoOverlay strong{position:relative;z-index:1;font-size:22px;font-weight:950;text-shadow:0 2px 16px rgba(0,0,0,.5)}
+.gsh-videoOverlay small{position:relative;z-index:1;font-size:13px;font-weight:800;color:rgba(255,255,255,.88)}
+.gsh-videoOverlay:hover .gsh-videoPlayButton{transform:scale(1.07);box-shadow:0 22px 65px rgba(0,0,0,.40),0 0 0 15px rgba(255,255,255,.12)}
+.gsh-videoOverlay:focus-visible{outline:4px solid var(--highlight);outline-offset:-4px}
+
 .gsh-videoHighlights{
   position:relative;
   z-index:1;
