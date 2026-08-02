@@ -1159,7 +1159,7 @@ const styles = `
 .gsh-videoBadge small{font-size:11px;color:var(--muted);margin-top:3px}
 .gsh-videoFrame{
   position:relative;
-  width:min(100%,1120px);
+  width:min(100%,980px);
   margin:0 auto;
   z-index:1;
   overflow:hidden;
