@@ -1096,7 +1096,7 @@ const styles = `
 .gsh-consoleFoot span{display:flex;align-items:center;gap:5px}
 
 .gsh-videoSection{padding:0 0 54px}
-.gsh-videoSection .gsh-container{width:min(1600px,calc(100% - 24px))}
+.gsh-videoSection .gsh-container{width:min(1320px,calc(100% - 32px))}
 .gsh-videoSurface{
   position:relative;
   overflow:hidden;
@@ -1159,6 +1159,8 @@ const styles = `
 .gsh-videoBadge small{font-size:11px;color:var(--muted);margin-top:3px}
 .gsh-videoFrame{
   position:relative;
+  width:min(100%,1120px);
+  margin:0 auto;
   z-index:1;
   overflow:hidden;
   border-radius:22px;
@@ -1203,14 +1205,13 @@ const styles = `
   display:block;
   width:100%;
   height:auto;
-  max-height:calc(100vh - 80px);
-  aspect-ratio:16/9;
+  max-height:none;
   object-fit:contain;
   background:#142729;
 }
 .gsh-videoStage:not(.is-playing) .gsh-video{
   filter:blur(3px) brightness(.62) saturate(.82);
-  transform:scale(1.012);
+  transform:none;
 }
 .gsh-video:focus-visible{outline:3px solid rgba(255,216,23,.70);outline-offset:-3px}
 .gsh-videoOverlay{
@@ -1458,6 +1459,9 @@ const styles = `
 }
 @media(max-width:720px){
   .gsh-container{width:min(100% - 22px,1420px)}
+  .gsh-videoSection .gsh-container{width:min(100% - 18px,1320px)}
+  .gsh-videoSurface{padding:14px}
+  .gsh-videoFrame{width:100%}
   .gsh-hero{padding-top:12px}
   .gsh-heroPanel,.gsh-surface,.gsh-management{padding:19px}
   .gsh-videoSurface{padding:16px;border-radius:22px}
