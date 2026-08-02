@@ -293,11 +293,14 @@ export default function HowItWorksPage() {
 
                 <video
                   className="gsh-video"
+                  autoPlay
+                  muted
+                  loop
                   controls
                   playsInline
-                  preload="metadata"
-                  poster="/videos/how-it-works-poster.jpg"
+                  preload="auto"
                   aria-describedby="walkthrough-description"
+                  aria-label="GrandScope importer-to-supplier workflow demonstration"
                 >
                   <source src="/videos/how-it-works.mp4" type="video/mp4" />
                   Your browser does not support embedded video. You can{' '}
@@ -1057,6 +1060,7 @@ const styles = `
 .gsh-consoleFoot span{display:flex;align-items:center;gap:5px}
 
 .gsh-videoSection{padding:0 0 54px}
+.gsh-videoSection .gsh-container{width:min(1600px,calc(100% - 24px))}
 .gsh-videoSurface{
   position:relative;
   overflow:hidden;
@@ -1157,6 +1161,8 @@ const styles = `
 .gsh-video{
   display:block;
   width:100%;
+  height:auto;
+  max-height:calc(100vh - 80px);
   aspect-ratio:16/9;
   object-fit:contain;
   background:#142729;
