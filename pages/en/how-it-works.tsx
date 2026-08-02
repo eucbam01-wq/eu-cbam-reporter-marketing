@@ -281,24 +281,11 @@ export default function HowItWorksPage() {
           <div className="gsh-container">
             <div className="gsh-videoSurface">
               <header className="gsh-videoHeader">
-                <div>
+                <div className="gsh-videoTitleBlock">
                   <span className="gsh-kicker">Product walkthrough</span>
                   <h2 id="walkthrough-title" className="gsh-h2">
                     Watch the complete importer-to-supplier workflow.
                   </h2>
-                  <p id="walkthrough-description">
-                    See how an importer starts with basic details, sends a secure
-                    supplier link, receives facility and emissions evidence, reviews
-                    the response, and moves the record towards CBAM-ready output.
-                  </p>
-                </div>
-
-                <div className="gsh-videoBadge" aria-label="Video duration: 1 minute 6 seconds">
-                  <span className="gsh-videoBadgeIcon">{iconPlay()}</span>
-                  <div>
-                    <strong>1 min 06 sec</strong>
-                    <small>GrandScope product demo</small>
-                  </div>
                 </div>
               </header>
 
@@ -341,6 +328,22 @@ export default function HowItWorksPage() {
                       <small>Starts with sound</small>
                     </button>
                   ) : null}
+                </div>
+              </div>
+
+              <div className="gsh-videoMeta">
+                <p id="walkthrough-description">
+                  See how an importer starts with basic details, sends a secure
+                  supplier link, receives facility and emissions evidence, reviews
+                  the response, and moves the record towards CBAM-ready output.
+                </p>
+
+                <div className="gsh-videoBadge" aria-label="Video duration: 1 minute 6 seconds">
+                  <span className="gsh-videoBadgeIcon">{iconPlay()}</span>
+                  <div>
+                    <strong>1 min 06 sec</strong>
+                    <small>GrandScope product demo</small>
+                  </div>
                 </div>
               </div>
 
@@ -1119,18 +1122,27 @@ const styles = `
   background:radial-gradient(circle,rgba(255,216,23,.18),rgba(63,117,181,.08) 46%,transparent 70%);
   pointer-events:none;
 }
+.gsh-videoSurface{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:
+    "title badge"
+    "description badge"
+    "video video"
+    "highlights highlights";
+  column-gap:28px;
+}
 .gsh-videoHeader{
   position:relative;
   z-index:1;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  align-items:end;
-  gap:28px;
-  margin-bottom:20px;
+  grid-area:title;
+  margin-bottom:8px;
 }
-.gsh-videoHeader>div:first-child{max-width:920px}
-.gsh-videoHeader .gsh-h2{margin-bottom:10px}
-.gsh-videoHeader p{font-size:17px;line-height:1.72;color:var(--muted);margin:0;max-width:880px}
+.gsh-videoTitleBlock{max-width:920px}
+.gsh-videoHeader .gsh-h2{margin-bottom:0}
+.gsh-videoMeta{display:contents}
+.gsh-videoMeta>p{grid-area:description;font-size:17px;line-height:1.72;color:var(--muted);margin:0 0 20px;max-width:880px}
+.gsh-videoMeta>.gsh-videoBadge{grid-area:badge;align-self:end;margin-bottom:20px}
 .gsh-videoBadge{
   display:flex;
   align-items:center;
@@ -1158,8 +1170,9 @@ const styles = `
 .gsh-videoBadge strong{font-size:14px;font-weight:950;line-height:1.25}
 .gsh-videoBadge small{font-size:11px;color:var(--muted);margin-top:3px}
 .gsh-videoFrame{
+  grid-area:video;
   position:relative;
-  width:min(100%,980px);
+  width:min(100%,1120px);
   margin:0 auto;
   z-index:1;
   overflow:hidden;
@@ -1272,6 +1285,7 @@ const styles = `
 .gsh-videoOverlay:focus-visible{outline:4px solid var(--highlight);outline-offset:-4px}
 
 .gsh-videoHighlights{
+  grid-area:highlights;
   position:relative;
   z-index:1;
   display:grid;
@@ -1450,7 +1464,6 @@ const styles = `
 }
 @media(max-width:920px){
   .gsh-heroGrid,.gsh-split,.gsh-ledgerSurface,.gsh-outputPanel{grid-template-columns:1fr}
-  .gsh-videoHeader{grid-template-columns:1fr;align-items:start}
   .gsh-videoBadge{min-width:0;width:max-content;max-width:100%}
   .gsh-console{max-width:720px}
   .gsh-outputTrack{grid-template-columns:repeat(5,minmax(100px,1fr));overflow-x:auto;padding-bottom:5px}
@@ -1460,11 +1473,25 @@ const styles = `
 @media(max-width:720px){
   .gsh-container{width:min(100% - 22px,1420px)}
   .gsh-videoSection .gsh-container{width:min(100% - 18px,1320px)}
-  .gsh-videoSurface{padding:14px}
+  .gsh-videoSurface{
+    padding:14px;
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "title"
+      "video"
+      "description"
+      "badge"
+      "highlights";
+    row-gap:0;
+  }
+  .gsh-videoHeader{margin-bottom:15px}
+  .gsh-videoMeta{display:contents}
+  .gsh-videoMeta>p{margin:16px 0 14px;max-width:none}
+  .gsh-videoMeta>.gsh-videoBadge{align-self:start;margin:0 0 4px}
   .gsh-videoFrame{width:100%}
   .gsh-hero{padding-top:12px}
   .gsh-heroPanel,.gsh-surface,.gsh-management{padding:19px}
-  .gsh-videoSurface{padding:16px;border-radius:22px}
+  .gsh-videoSurface{border-radius:22px}
   .gsh-videoSection{padding-bottom:40px}
   .gsh-videoHeader{gap:17px;margin-bottom:15px}
   .gsh-videoHeader p{font-size:16px}
