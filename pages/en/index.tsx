@@ -5,7 +5,7 @@ import PenaltyCalculator from "../../src/components/PenaltyCalculator";
 
 export default function HomePage() {
   const ROUTES = {
-    startReport: "/check",
+    startReport: "/app",
     requestDemo: "/en/contact",
     pricing: "/en/pricing",
     howItWorks: "/en/how-it-works",

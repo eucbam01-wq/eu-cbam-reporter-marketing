@@ -1,3 +1,5 @@
-﻿import_ref,import_date,supplier_name,supplier_email,cn_code,goods_description,quantity,net_mass_kg,customs_value,country_of_origin,procedure_code
-IMP-TEST-001,2025-12-15,Legal china Test,supplier@example.com,73089000,Steel structures,1000,540,25000,CN,40
-IMP-TEST-002,2025-12-18,Legal china Test,supplier@example.com,73089000,Steel structures,500,270,12000,CN,40
+import_ref,import_date,supplier_name,supplier_country,product_sku,product_description,cn_code,quantity,net_mass_kg,customs_value_eur,country_of_origin,procedure_code
+IMP-P010-A-001,2025-12-15,Hebei Green Steel Co. Ltd,CN,GS-730890-A,Steel structures and parts,73089000,1000,540,25000,CN,40
+IMP-P010-A-002,2025-12-18,Anatolia Aluminium AS,TR,AL-760429-A,Aluminium alloy bars,76042990,500,270,12000,TR,40
+IMP-P010-B-001,2025-12-20,Hebei Green Steel Co. Ltd,CN,GS-730890-B,Steel structures and parts,73089000,750,405,19000,CN,40
+IMP-P010-B-002,2025-12-22,Anatolia Aluminium AS,TR,AL-760429-B,Aluminium alloy bars,76042990,320,175,8500,TR,40

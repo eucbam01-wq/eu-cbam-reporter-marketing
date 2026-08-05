@@ -9,7 +9,7 @@ const plans = [
     description:
       "For smaller importers building a controlled CBAM reporting process for one legal entity.",
     badge: "Start controlled",
-    href: "/check",
+    href: "/app",
     cta: "Start free report",
     featured: false,
     features: [
@@ -210,7 +210,7 @@ export function PricingPage() {
                 </p>
 
                 <div className="gsp-heroActions">
-                  <Link className="gsp-btn gsp-btnPrimary" href="/check">
+                  <Link className="gsp-btn gsp-btnPrimary" href="/app">
                     Start free CBAM report
                   </Link>
                   <Link className="gsp-btn gsp-btnGhost" href="/en/contact">
@@ -480,7 +480,7 @@ export function PricingPage() {
               </p>
             </div>
             <div className="gsp-finalActions">
-              <Link className="gsp-btn gsp-btnPrimary" href="/check">
+              <Link className="gsp-btn gsp-btnPrimary" href="/app">
                 Start free CBAM report
               </Link>
               <Link className="gsp-btn gsp-btnGhost" href="/en/contact">

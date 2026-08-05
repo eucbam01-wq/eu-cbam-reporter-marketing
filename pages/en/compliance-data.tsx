@@ -357,7 +357,7 @@ export default function ComplianceDataPage() {
                   </p>
 
                   <div className="gscd-actions">
-                    <Link className="gscd-btn gscd-btnPrimary" href="/check">
+                    <Link className="gscd-btn gscd-btnPrimary" href="/app">
                       Start free CBAM report
                     </Link>
                     <Link className="gscd-btn gscd-btnGhost" href="/en/contact">
@@ -990,7 +990,7 @@ export default function ComplianceDataPage() {
                 </p>
               </div>
               <div className="gscd-finalActions">
-                <Link className="gscd-btn gscd-btnPrimary" href="/check">
+                <Link className="gscd-btn gscd-btnPrimary" href="/app">
                   Start free CBAM report
                 </Link>
                 <Link className="gscd-btn gscd-btnGhost" href="/en/contact">
