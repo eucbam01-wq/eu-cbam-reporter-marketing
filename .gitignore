@@ -28,3 +28,6 @@ Thumbs.db
 .idea/
 
 # File: eu-cbam-reporter-marketing/.gitignore
+_p0_6_evidence/
+_p0_13_ci_evidence/
+tsconfig.tsbuildinfo
