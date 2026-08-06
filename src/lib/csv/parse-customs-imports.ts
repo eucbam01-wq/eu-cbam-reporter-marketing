@@ -223,7 +223,10 @@ function parseCsvText(csvText: string): { header: string[]; data: string[][]; er
   }
 
   const header = rows.length > 0 ? rows[0] : []
-  const data = rows.length > 1 ? rows.slice(1) : []
+  const data =
+    rows.length > 1
+      ? rows.slice(1).filter((cells) => cells.some((value) => value.trim() !== ""))
+      : []
   return { header, data, errors }
 }
 

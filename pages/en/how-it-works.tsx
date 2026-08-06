@@ -225,7 +225,7 @@ export default function HowItWorksPage() {
                   </p>
 
                   <div className="gsh-actions">
-                    <Link className="gsh-btn gsh-btnPrimary" href="/check">
+                    <Link className="gsh-btn gsh-btnPrimary" href="/app">
                       Start free CBAM report
                     </Link>
                     <button
@@ -807,7 +807,7 @@ export default function HowItWorksPage() {
                 </p>
               </div>
               <div className="gsh-finalActions">
-                <Link className="gsh-btn gsh-btnPrimary" href="/check">
+                <Link className="gsh-btn gsh-btnPrimary" href="/app">
                   Start free CBAM report
                 </Link>
                 <Link className="gsh-btn gsh-btnGhost" href="/en/contact">

@@ -1,0 +1,112 @@
+name: GrandScope Quality Gates
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grandscope-quality-gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: quality-gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "p0-13-ci-placeholder-anon-key"
+      NEXT_PUBLIC_SUPABASE_EVIDENCE_BUCKET: "supplier-evidence"
+      NEXT_PUBLIC_PLAN_TIER: "free"
+      SUPABASE_URL: "https://example.supabase.co"
+      SUPABASE_ANON_KEY: "p0-13-ci-placeholder-anon-key"
+      SUPABASE_SERVICE_ROLE_KEY: "p0-13-ci-placeholder-service-role-key"
+      STRIPE_SECRET_KEY: "sk_test_p0_13_ci_placeholder"
+      STRIPE_WEBHOOK_SECRET: "whsec_p0_13_ci_placeholder"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      - name: Prepare evidence directory
+        run: mkdir -p _p0_13_ci_evidence
+
+      - name: Install exact dependencies
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee _p0_13_ci_evidence/npm-ci.log
+
+      - name: TypeScript typecheck
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee _p0_13_ci_evidence/typecheck.log
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          npm run test:unit 2>&1 | tee _p0_13_ci_evidence/unit-tests.log
+
+      - name: CI configuration gate
+        run: |
+          set -o pipefail
+          npm run test:ci-config 2>&1 | tee _p0_13_ci_evidence/ci-configuration.log
+
+      - name: Database object and authorization static gate
+        run: |
+          set -o pipefail
+          npm run test:db:static 2>&1 | tee _p0_13_ci_evidence/database-static.log
+
+      - name: Production build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee _p0_13_ci_evidence/build.log
+
+      - name: Route smoke tests
+        run: |
+          set -o pipefail
+          timeout --signal=TERM --kill-after=30s 12m \
+            node scripts/p0.6-route-crawler.mjs \
+              --start-server \
+              --project-root . \
+              --output-dir _p0_13_ci_evidence/route-smoke \
+              --request-timeout-ms 30000 \
+              --crawl-timeout-ms 600000 \
+              --max-routes 500 \
+            2>&1 | tee _p0_13_ci_evidence/route-smoke.log
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.111.0
+
+      - name: Migration reset, SQL lint, and pgTAP
+        run: |
+          set -o pipefail
+          npm run test:db 2>&1 | tee _p0_13_ci_evidence/database-gates.log
+
+      - name: Upload quality-gate evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: grandscope-p0-13-quality-gate-evidence-${{ github.run_id }}
+          path: _p0_13_ci_evidence/
+          if-no-files-found: warn
+          retention-days: 30
