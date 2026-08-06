@@ -2,7 +2,7 @@
 import Head from "next/head";
 import type { GetServerSideProps } from "next";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import SupplierPortalForm from "./supplier-portal-form";
+import SupplierPortalForm from "../../src/components/supplier/SupplierPortalForm";
 import { type SupplierMeta, useSupplierI18n } from "../../src/supplier-i18n";
 import React, { useCallback, useMemo, useState } from "react";
 

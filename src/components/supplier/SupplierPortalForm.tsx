@@ -1,9 +1,8 @@
-// FILE: marketing/pages/supplier/supplier-portal-form.tsx
+// FILE: marketing/src/components/supplier/SupplierPortalForm.tsx
 import React from "react";
-// frontend/src/pages/supplier/[token]/supplier-portal-form.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { type SupplierMeta, useSupplierI18n, type TFunc } from "../../src/supplier-i18n";
+import { type SupplierMeta, useSupplierI18n, type TFunc } from "../../supplier-i18n";
 
 type PrecursorRow = {
   cn_code: string;
@@ -1715,5 +1714,4 @@ export default function SupplierPortalForm({
     </form>
   );
 }
-// frontend/src/pages/supplier/[token]/supplier-portal-form.tsx
-// FILE: marketing/pages/supplier/supplier-portal-form.tsx
+// FILE: marketing/src/components/supplier/SupplierPortalForm.tsx
