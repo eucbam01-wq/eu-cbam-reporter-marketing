@@ -1,4 +1,4 @@
-// File: pages/api/stripe/webhook.ts
+// File: marketing/pages/api/stripe/webhook.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Stripe from 'stripe'
 
@@ -7,8 +7,6 @@ export const config = {
     bodyParser: false,
   },
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
 function buffer(req: NextApiRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -25,17 +23,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end('Method Not Allowed')
   }
 
-  const sig = req.headers['stripe-signature']
-  if (!sig) return res.status(400).end('Missing signature')
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+  if (!stripeSecretKey || !webhookSecret) {
+    return res.status(500).end('Stripe webhook is not configured')
+  }
+
+  const signatureHeader = req.headers['stripe-signature']
+  const signature = Array.isArray(signatureHeader)
+    ? signatureHeader[0]
+    : signatureHeader
+
+  if (!signature) return res.status(400).end('Missing signature')
 
   try {
     const rawBody = await buffer(req)
-    stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET as string
-    )
-  } catch (err) {
+    const stripe = new Stripe(stripeSecretKey)
+    stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
+  } catch {
     return res.status(400).end('Webhook Error')
   }
 

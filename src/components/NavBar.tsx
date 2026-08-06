@@ -38,7 +38,7 @@ export default function NavBar({ iconSizeMobile = 22, iconSizeDesktop = 26 }: Na
   const hrefHow = `${localePrefix}/how-it-works`;
   const hrefCompliance = `${localePrefix}/compliance-data`;
   const hrefContact = `${localePrefix}/contact`;
-  const hrefRequestDemo = `${localePrefix}#request-demo`;
+  const hrefRequestDemo = hrefContact;
 
   // Close on outside click
   useEffect(() => {
