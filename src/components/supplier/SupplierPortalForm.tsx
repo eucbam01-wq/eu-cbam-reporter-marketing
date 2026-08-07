@@ -1,9 +1,8 @@
-// FILE: marketing/pages/supplier/supplier-portal-form.tsx
+// FILE: marketing/src/components/supplier/SupplierPortalForm.tsx
 import React from "react";
-// frontend/src/pages/supplier/[token]/supplier-portal-form.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { type SupplierMeta, useSupplierI18n, type TFunc } from "../../src/supplier-i18n";
+import { type SupplierMeta, useSupplierI18n, type TFunc } from "../../supplier-i18n";
 
 type PrecursorRow = {
   cn_code: string;
@@ -924,6 +923,43 @@ export default function SupplierPortalForm({
     setTouched((cur) => ({ ...cur, [key]: true }));
   }
 
+  async function ensureSupplierEvidenceSession(expectedRequestId: string): Promise<void> {
+    const { data: currentData, error: currentError } = await supabase.auth.getSession();
+    if (currentError) throw currentError;
+
+    let session = currentData.session;
+    if (!session) {
+      const { data: anonymousData, error: anonymousError } = await supabase.auth.signInAnonymously();
+      if (anonymousError) throw anonymousError;
+      session = anonymousData.session;
+    }
+
+    const anonymousUser = session?.user as ({ is_anonymous?: boolean } | undefined);
+    if (!session || anonymousUser?.is_anonymous !== true) {
+      throw new Error("A signed anonymous supplier session is required for evidence upload.");
+    }
+
+    const { data: bindData, error: bindError } = await supabase.rpc(
+      "bind_supplier_evidence_session" as any,
+      { p_token: token } as any,
+    );
+    if (bindError) throw bindError;
+
+    const boundValue = asSingleRow<any>(bindData);
+    const boundRequestId =
+      typeof boundValue === "string"
+        ? boundValue
+        : typeof boundValue?.supplier_request_id === "string"
+          ? boundValue.supplier_request_id
+          : typeof boundValue?.request_id === "string"
+            ? boundValue.request_id
+            : null;
+
+    if (boundRequestId !== expectedRequestId) {
+      throw new Error("Supplier evidence session was not bound to the expected request.");
+    }
+  }
+
   async function uploadScope2EvidenceIfNeeded(): Promise<EvidenceFileRef | null> {
     if (!requestId) return null;
     if (input.scope2.source_type !== "actual") return null;
@@ -937,6 +973,8 @@ export default function SupplierPortalForm({
     const bucket = (process.env.NEXT_PUBLIC_SUPABASE_EVIDENCE_BUCKET as string | undefined) || "supplier-evidence";
     const safeName = (f.name || "evidence").replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${requestId}/${Date.now()}_${safeName}`;
+
+    await ensureSupplierEvidenceSession(requestId);
 
     const { error } = await supabase.storage.from(bucket).upload(path, f, {
       cacheControl: "3600",
@@ -1715,5 +1753,4 @@ export default function SupplierPortalForm({
     </form>
   );
 }
-// frontend/src/pages/supplier/[token]/supplier-portal-form.tsx
-// FILE: marketing/pages/supplier/supplier-portal-form.tsx
+// FILE: marketing/src/components/supplier/SupplierPortalForm.tsx

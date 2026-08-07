@@ -1,0 +1,31 @@
+{
+  "sourceRoots": [
+    "pages",
+    "src",
+    "supabase/functions"
+  ],
+  "migrationRoots": [
+    "supabase/migrations"
+  ],
+  "evidenceDir": "_p0_13_ci_evidence/db-contract",
+  "generatedAuthorizationTest": "supabase/tests/p0.9_referenced_object_authorization_test.sql",
+  "defaultSchema": "public",
+  "sourceExtensions": [
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs"
+  ],
+  "dynamicBucketFallbacks": {
+    "NEXT_PUBLIC_SUPABASE_EVIDENCE_BUCKET": "supplier-evidence"
+  },
+  "publicSupplierRpcs": [
+    "get_supplier_portal_context",
+    "mark_supplier_request_viewed",
+    "submit_supplier_portal_submission",
+    "validate_supplier_token"
+  ],
+  "authorizationWarningRpcs": []
+}
